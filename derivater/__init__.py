@@ -5,3 +5,5 @@ from derivater._base import (
 from derivater._constants import e, tau, pi
 from derivater._explog import NaturalLog, exp, ln, log, log2, log10
 from derivater._trig import sin, cos, tan
+
+__version__ = '1.0'

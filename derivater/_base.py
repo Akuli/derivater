@@ -6,7 +6,6 @@ def eq_and_hash(as_is=(), tupled=()):
 
     If you want to make a :class:`MathObject` subclass that is used like
     this...
-
     ::
         t = Toot(a, b, [c, d])
 
@@ -15,10 +14,9 @@ def eq_and_hash(as_is=(), tupled=()):
     e.g. ``ln(x**2) == ln(x**2)`` and ``hash(ln(x**2)) == hash(ln(x**2))``, but
     ``ln(x**2) != 2*ln(x)`` and ``hash(ln(x**2)) != hash(2*ln(x))``. So, our
     ``Toot`` class can be written like this...
-
     ::
 
-        class Toot(MathObject):
+        class Toot(derivater.MathObject):
 
             def __init__(self, a, b, cdlist):
                 self.a = a
@@ -37,8 +35,9 @@ def eq_and_hash(as_is=(), tupled=()):
                 return hash((self.a, self.b, tuple(self.cdlist)))
 
     ...or like this::
-        @eq_and_hash(['a', 'b'], tupled=['cdlist'])
-        class Toot(MathObject):
+
+        @derivater.eq_and_hash(['a', 'b'], tupled=['cdlist'])
+        class Toot(derivater.MathObject):
 
             def __init__(self, a, b, bclist):
                 self.a = a
@@ -88,6 +87,33 @@ class MathObject:
     """Base class for all mathy objects.
 
     .. seealso:: :func:`eq_and_hash`
+
+    .. method:: add_parenthesize
+                mul_parenthesize
+                pow_parenthesize
+
+        Pretty-printing objects is usually implemented with ``__repr__()``. For
+        example, :class:`.NaturalLog` does this::
+
+            def __repr__(self):
+                return 'ln(%r)' % self.numerus
+
+        However, sometimes parenthesized things are needed. If we have
+        ``(x + 1)**y`` it must not be displayed as ``x + 1**y``, but if we have
+        ``2**y`` it must not be displayed as ``(2)**y``. These methods let you
+        customize how the object is parenthesized. Click the above *[source]*
+        links to see what these methods do by default; usually it's enough to
+        implement just one of these methods e.g. like this::
+
+            def mul_parenthesize(self):
+                return '(' + repr(self) + ')'
+
+        Reprs of :class:`Add`, :class:`Mul` and :class:`Pow` call these methods
+        roughly like this:
+
+        * ``repr(x+y) == x.add_parenthesize() + ' + ' + y.add_parenthesize()``
+        * ``repr(x*y) == x.mul_parenthesize() + '*' + y.mul_parenthesize()``
+        * ``repr(x**y) == x.pow_parenthesize() + '**' + y.pow_parenthesize()``
     """
 
     # repr()s with parenthesis for Add, Mul and Pow
