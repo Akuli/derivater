@@ -17,19 +17,28 @@ Or like this if you are on Windows:
 That is roughly equivalent to starting Python normally and then doing this:
 
 ```python
->>> from derivativer import *
+>>> import functools
+>>> from derivater import *
 >>> a = Symbol('a')
 >>> b = Symbol('b')
 >>> c = Symbol('c')
+>>> f = functools.partial(SymbolFunction, 'f')
+>>> g = functools.partial(SymbolFunction, 'g')
 >>> x = Symbol('x')
 >>> y = Symbol('y')
 >>> z = Symbol('z')
 ```
 
+If you can't get the `-im` trick to work, you can just start Python normally
+and do this:
+
+```python
+>>> from derivater.__main__ import *
+```
+
 Symbols are, of course, an important thing in a symbolic calculation library.
 
 ```python
->>> from derivater import *; x = Symbol('x')
 >>> x + x
 2*x
 >>> x + y
@@ -39,7 +48,6 @@ x + y
 You can `+`, `-`, `*`, `/` or `**` symbols however you want:
 
 ```python
->>> from derivater import *; x = Symbol('x')
 >>> x * x * x
 x**3
 >>> (x + 2)**(-1)
