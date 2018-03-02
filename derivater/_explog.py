@@ -9,12 +9,16 @@ def exp(exponent):
     return e**exponent
 
 
-# low-level logarithm class
-#   * numerus must not be 1 or e
 @eq_and_hash(['numerus'])
-class _NaturalLog(MathObject):
+class NaturalLog(MathObject):
+    """The type of many objects returned by :func:`ln`.
+
+    Don't create ``NaturalLog`` objects yourself; use :func:`ln` instead. It
+    may return special values like 0 or 1 instead of ``NaturalLog`` objects.
+    """
 
     def __init__(self, numerus):
+        assert numerus != 1 and numerus != e
         self.numerus = numerus
 
     def __repr__(self):
@@ -53,7 +57,8 @@ def ln(numerus):
 def log(numerus, base=e):
     """Return the logarithm of *numerus* with the given *base*.
 
-    This is equivalent to ``ln(numerus) / ln(base)``."""
+    This is equivalent to ``ln(numerus) / ln(base)``.
+    """
     return ln(numerus) / ln(base)
 
 
