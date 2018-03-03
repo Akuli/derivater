@@ -69,7 +69,7 @@ def eq_and_hash(as_is=(), tupled=()):
 
 
 def mathify(obj):
-    """Convert a Python number into a mathy object.
+    """Convert a Python number into a :class:`MathObject`.
 
     If *obj* is already a :class:`MathObject`, it's returned as is.
     """
@@ -85,6 +85,9 @@ def mathify(obj):
 # objects are considered very similar, e.g. Symbol('x') == Symbol('x')
 class MathObject:
     """Base class for all mathy objects.
+
+    Inherit from this class if you want to make an object that is compatible
+    with derivater.
 
     .. seealso:: :func:`eq_and_hash`
 
@@ -128,6 +131,10 @@ class MathObject:
 
     # should return True if not sure
     def may_depend_on(self, var):
+        """Check if this variable depends on the value of *var*.
+
+        The *var* should always be a :class:`Symbol`.
+        """
         return True
 
     def replace(self, old, new):
@@ -187,6 +194,17 @@ class Symbol(MathObject):
     x
     >>> 1 + x*x
     x**2 + 1
+
+    You can use Symbols freely with all derivater functions, but Python's
+    built-in functions don't usually like them:
+
+    >>> sin(x)
+    sin(x)
+    >>> import math
+    >>> math.sin(x)
+    Traceback (most recent call last):
+      ...
+    TypeError: must be real number, not Symbol
     """
 
     def __init__(self, name):
@@ -227,8 +245,7 @@ class SymbolFunction(MathObject):
     >>> SymbolFunction('g', x)
     g(x)
 
-    If you want to type ``f(x)`` to get ``f(x)``, just use a
-    :func:`partial <functools.partial>`.
+    Use :func:`functools.partial` if you want to type ``f(x)`` to get ``f(x)``:
 
     >>> from functools import partial
     >>> f = partial(SymbolFunction, 'f')
@@ -236,7 +253,7 @@ class SymbolFunction(MathObject):
     >>> f(x)
     f(x)
 
-    You can take derivatives of SymbolFunctions:
+    You can e.g. take derivatives of SymbolFunctions nicely.
 
     >>> SymbolFunction('f', x, derivative_count=2)
     f''(x)
@@ -273,7 +290,8 @@ class SymbolFunction(MathObject):
 class Integer(MathObject):
     """An integer with a known value.
 
-    You can create Integer objects yourself.
+    You can create Integer objects yourself or, equivalently, you can pass a
+    Python int to :func:`mathify`.
     """
 
     def __init__(self, python_int):
@@ -313,9 +331,6 @@ def _looks_like_negative(expr):
 class Add(MathObject):
     """An object that represents a bunch of things added together.
 
-    Don't create ``Add`` objects directly; use ``+`` or :func:`add` instead.
-    This class is exposed mostly for :func:`isinstance` checks.
-
     All ``Add`` objects should satisfy these things:
 
     * There's never an ``Add`` directly inside an ``Add``;
@@ -326,7 +341,11 @@ class Add(MathObject):
     * The object list can contain at most 1 :class:`Integer`.
     * If the object list contains an integer, it's ``objects[0]``.
 
+    Substraction like ``a - b`` is represented as
+    ``Add([a, Mul([Integer(-1), b])])``.
+
     .. attribute:: objects
+
         List of the added objects.
     """
 
@@ -376,20 +395,18 @@ class Add(MathObject):
 class Mul(MathObject):
     """An object that represents a bunch of stuff multiplied with each other.
 
-    Don't create ``Mul`` objects directly; use ``*`` or :func:`mul` instead.
-    This class is exposed mostly for :func:`isinstance` checks.
-
     All ``Mul`` objects should satisfy these things:
 
-    * There's never a ``Mul`` directly inside a ``Mul``;
-      ``Mul([a, b, Mul([c, d])])`` is expaneded to ``Mul([a, b, c, d])``.
-    * The list of multiplied objects is accessible as ``mul_object.objects``
-      and it always contains at least 2 elements.
-    * The object list does not contain ones or zeros.
-    * The object list can contain at most 1 integer (positive or negative).0
-    * If the object list contains an integer, it's ``objects[0]``.
+        * There's never a ``Mul`` directly inside a ``Mul``;
+          ``Mul([a, b, Mul([c, d])])`` is expaneded to ``Mul([a, b, c, d])``.
+        * The list of multiplied objects is accessible as
+          ``mul_object.objects`` and it always contains at least 2 elements.
+        * The object list does not contain ones or zeros.
+        * The object list can contain at most 1 integer (positive or negative).
+        * If the object list contains an integer, it's ``objects[0]``.
 
     .. attribute:: objects
+
         List of the multiplied objects.
     """
 
@@ -459,19 +476,17 @@ class Mul(MathObject):
 class Pow(MathObject):
     """An object that represents ``base ** exponent``.
 
-    Don't create ``Pow`` objects directly; use ``*`` or :func:`pow` instead.
-    This class is exposed mostly for :func:`isinstance` checks.
-
     All ``Pow`` objects should satisfy these things:
 
-    * The base cannot be a ``Pow`` object; ``(x**y)**z`` must be converted to
-      ``x**(y*z)``.
-    * The base and the exponent must not be 1.
+        * The base cannot be a ``Pow`` object; ``(x**y)**z`` must be converted
+          to ``x**(y*z)``.
+        * The base and the exponent must not be 1.
 
     Division is represented as ``Pow(x, something_negative)``.
 
     .. attribute:: base
-    .. attribute:: exponent
+                   exponent
+
         Pow objects represent ``base**exponent``.
 
     """

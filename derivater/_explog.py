@@ -5,7 +5,17 @@ from derivater._constants import e
 
 
 def exp(exponent):
-    """This is equivalent to ``e**exponent``."""
+    """This is equivalent to ``e**exponent``.
+
+    Unlike in Python's ``math`` module, this function is no more precise than a
+    plain ``e**x``, and it's there just for people who prefer to write
+    ``exp(x)`` instead of ``e**x``.
+
+    >>> exp(x)
+    e**x
+    >>> exp(x).derivative(x)
+    e**x
+    """
     return e**exponent
 
 
@@ -15,6 +25,10 @@ class NaturalLog(MathObject):
 
     Don't create ``NaturalLog`` objects yourself; use :func:`ln` instead. It
     may return special values like 0 or 1 instead of ``NaturalLog`` objects.
+
+    .. attribute:: numerus
+
+        The object passed to :func:`ln`.
     """
 
     def __init__(self, numerus):
@@ -45,19 +59,32 @@ class NaturalLog(MathObject):
 
 
 def ln(numerus):
-    """Return the natural logarithm (base :data:`e`) of *numerus*."""
+    """Return the natural logarithm (base :data:`e`) of *numerus*.
+
+    >>> ln(e)
+    1
+    >>> ln(x).derivative(x)
+    1 / x
+    >>> (x**x).derivative(x)
+    x**x*(ln(x) + 1)
+    """
     numerus = mathify(numerus)
     if numerus == mathify(1):
         return mathify(0)
     if numerus == e:
         return mathify(1)
-    return _NaturalLog(numerus)
+    return NaturalLog(numerus)
 
 
 def log(numerus, base=e):
     """Return the logarithm of *numerus* with the given *base*.
 
     This is equivalent to ``ln(numerus) / ln(base)``.
+
+    >>> log(x, 2)
+    ln(x) / ln(2)
+    >>> log(x)
+    ln(x)
     """
     return ln(numerus) / ln(base)
 

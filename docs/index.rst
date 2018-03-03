@@ -4,7 +4,11 @@ Derivater's Documentation
 .. toctree::
     :maxdepth: 1
 
-    base
+    basicstuff
+    constants
+    explog
+    trig
+    lowlevel
 
 
 Indices and tables
