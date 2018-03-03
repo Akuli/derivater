@@ -56,6 +56,19 @@ class tan(MathObject):
         self.arg = arg
 
     def derivative(self, wrt):
-        # FIXME: replace is broken, .replace sin^2/cos^2 with self**2 when it's
-        #        fixed
-        return (sin(self.arg) / cos(self.arg)).derivative(wrt)
+        # FIXME: this doesn't work very well
+        #
+        # >>> sin(2*x)/cos(2*x)
+        # sin(2*x) / cos(2*x)
+        # >>> _.derivative(x)
+        # 2 + 2*(sin(2*x))**2 / (cos(2*x))**2
+        # >>> (sin(2*x)/cos(2*x)).derivative(x)
+        # 2 + 2*(sin(2*x))**2 / (cos(2*x))**2
+        # >>> _.replace(sin(2*x)**2/cos(2*x)**2, tan(2*x)**2)
+        # 2*(sin(2*x))**2 / (cos(2*x))**2 + 2
+        # >>> _.replace(2*sin(2*x)**2/cos(2*x)**2, 2*tan(2*x)**2)
+        # 2*(tan(2*x))**2 + 2
+        #
+        # this is Mul's fault, it should partially replace args as well
+        return (sin(self.arg) / cos(self.arg)).derivative(wrt).replace(
+            sin(self.arg)**2 / cos(self.arg)**2, tan(self.arg)**2)
