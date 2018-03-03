@@ -16,7 +16,7 @@ def test_minus():
     assert (x-y).objects == [x, -y]
 
 
-# TODO: check all corner cases
+# TODO: check all corner cases!!!
 def test_add_repr():
     assert repr(x+y) == 'x + y'
     assert repr(x-y) == 'x - y'
@@ -35,13 +35,6 @@ def test_pow_repr():
     assert repr(x**y) == 'x**y'
     assert repr(1/x) == '1 / x'
     assert repr(1/(x+y)) == '1 / (x + y)'
-
-
-def test_may_depend_on():
-    for obj in [x + y, x - y, x * y, x / y, x ** y]:
-        assert obj.may_depend_on(x)
-        assert obj.may_depend_on(y)
-        assert not obj.may_depend_on(z)
 
 
 def test_automagic_flatten():

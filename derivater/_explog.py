@@ -38,8 +38,8 @@ class NaturalLog(MathObject):
     def __repr__(self):
         return 'ln(%r)' % self.numerus
 
-    def replace_content(self, old, new):
-        return ln(self.numerus.replace(old, new))
+    def apply_to_content(self, func):
+        return ln(func(self.numerus))
 
     # explicit is better than implicit, (ln(a))**b is better than ln(a)**b
     def pow_parenthesize(self):

@@ -7,6 +7,7 @@ def eq_and_hash(converters):
     If you want to make a :class:`MathObject` subclass that is used like
     this...
     ::
+
         t = Toot(a, b, [c, d])
 
     ...then you should also implement ``__eq__`` and ``__hash__``. They should
@@ -125,7 +126,66 @@ class MathObject:
         * ``repr(x**y) == x.pow_parenthesize() + '**' + y.pow_parenthesize()``
     """
 
-    # repr()s with parenthesis for Add, Mul and Pow
+    def apply_to_content(self, func):
+        """Return a new object with *func* applied to every object that this o\
+bject contains.
+
+        >>> def two_times(obj):
+        ...     return 2*obj
+        ...
+        >>> (x + y*z).apply_to_content(two_times)
+        2*x + 2*y*z
+
+        Override this if your object contains something. For example,
+        :class:`.NaturalLog` does something like this::
+
+            def __init__(self, numerus):
+                self.numerus = numerus
+
+            def apply_to_content(self, func):
+                return ln(func(self.numerus))
+
+        By default, this returns *self* unchanged.
+        """
+        return self
+
+    def apply_recursively(self, func):
+        """A recursive version of :func:`apply_to_content`.
+
+        >>> class Lol(MathObject):
+        ...     def __init__(self, content):
+        ...         self.content = content
+        ...     def __repr__(self):
+        ...         return 'Lol(%r)' % self.content
+        ...
+        >>> (x + y*z).apply_recursively(Lol)
+        Lol(Lol(x) + Lol(Lol(y)*Lol(z)))
+
+        If you think you need to override this, you might want to override
+        :func:`apply_to_content` instead.
+        """
+        result = self.apply_to_content(lambda obj: obj.apply_recursively(func))
+        return func(result)
+
+    def get_content(self):
+        """Return a list of the content that :func:`apply_to_content` applies \
+to.
+
+        >>> (x**y).get_content()
+        [x, y]
+
+        This is implemented with :func:`apply_to_content`, so usually you don't
+        need to override this. Just override :func:`apply_to_content` instead.
+        """
+        result = []
+
+        def callback(obj):
+            result.append(obj)
+            return obj
+
+        self.apply_to_content(callback)
+        return result
+
     def add_parenthesize(self):
         return repr(self)
 
@@ -135,60 +195,56 @@ class MathObject:
     def pow_parenthesize(self):
         return self.mul_parenthesize()
 
-    # should return True if not sure
     def may_depend_on(self, var):
         """Check if this variable depends on the value of *var*.
 
-        The *var* should always be a :class:`Symbol`.
+        By default, this checks if the content depends on anything using
+        :func:`apply_to_content`, and returns False if there is no content.
         """
-        return True
+        for obj in self.get_content():
+            if obj.may_depend_on(var):
+                return True
+        return False
 
     def replace(self, old, new):
         """Replace parts of the math object with another.
 
-        MathObjects are never mutated, so this always returns a new object
-
-        >>> ln(2*x).replace(2*x, y)
-        ln(y)
+        >>> ln(2*x).replace(2*x, 3)
+        ln(3)
         >>> x.replace(x, y)
         y
         >>> ln(2).replace(x, y)    # nothing happens
         ln(2)
 
-        Don't override this method in a custom class; override
-        :meth:`replace_content` instead.
+        If you think you want to override this, you may want to override
+        :meth:`apply_recursively` instead; this method is implemented with
+        that.
         """
-        old, new = mathify(old), mathify(new)
-        if self == old:
-            return new
-        return self.replace_content(old, new)
+        old = mathify(old)
+        new = mathify(new)
 
-    def replace_content(self, old, new):
-        """If this object contains more MathObjects nested, this should call t\
-heir :meth:`replace` methods.
+        def replacer(obj):
+            if obj == old:
+                return new
+            return obj
 
-        Usually it's best to use :meth:`replace` instead of calling this method
-        directly. You can assume that *old* and *new* are already mathified
-        when overriding this, and you must mathify *old* and *new* when calling
-        this.
+        return self.apply_recursively(replacer)
 
-        >>> (x + y).replace(x, a)
-        a + y
-        >>> (x + y).replace(x + y, a)
-        a
-        >>> (x + y).replace_content(x, a)
-        a + y
-        >>> (x + y).replace_content(x + y, a)   # this is the difference
-        x + y
-        """
-        return self
-
-    # everything except stuff with wrt in it are constants
     # wrt should be a Symbol
     def derivative(self, wrt):
+        """Return the derivative with respect to *wrt*.
+
+        >>> sin(x).derivative(x)
+        cos(x)
+        >>> sin(y).derivative(x)      # Symbols are independent
+        0
+        >>> sin(f(x)).derivative(x)   # but SymbolFunctions work better
+        cos(f(x))*f'(x)
+        """
         if not self.may_depend_on(wrt):
             return mathify(0)
-        raise TypeError("cannot take derivative of %s" % type(self).__name__)
+        raise TypeError("cannot take derivative of %r with respect to %r"
+                        % (self, wrt))
 
     def __add__(self, other):   # self + other
         return add([self, other])
@@ -285,8 +341,8 @@ class SymbolFunction(MathObject):
     f(x)
 
     There are also ``f_`` and ``g_`` defined like this...
-
     ::
+
         f_ = partial(f, derivative_count=1)
         g_ = partial(g, derivative_count=1)
 
@@ -318,12 +374,9 @@ class SymbolFunction(MathObject):
         return '%s%s(%r)' % (
             self.name, "'" * self.derivative_count, self.arg)
 
-    def replace_content(self, old, new):
-        return SymbolFunction(self.name, self.arg.replace(old, new),
+    def apply_to_content(self, func):
+        return SymbolFunction(self.name, func(self.arg),
                               derivative_count=self.derivative_count)
-
-    def may_depend_on(self, wrt):
-        return self.arg.may_depend_on(wrt)
 
     def derivative(self, wrt):
         return (SymbolFunction(self.name, self.arg,
@@ -403,15 +456,12 @@ class Add(MathObject):
                 result.append(obj.add_parenthesize())
         return ''.join(result)
 
+    # TODO: how about something like (a+b+c+x).replace(b+c, y)?
+    def apply_to_content(self, func):
+        return add(map(func, self.objects))
+
     def mul_parenthesize(self):
         return '(' + repr(self) + ')'
-
-    def may_depend_on(self, wrt):
-        return any(obj.may_depend_on(wrt) for obj in self.objects)
-
-    def replace_content(self, old, new):
-        # TODO: how about something like (a+b+c+x).replace(b+c, y)?
-        return add(obj.replace(old, new) for obj in self.objects)
 
     def derivative(self, wrt):
         # d/dx (f(x) + g(x)) = f'(x) + g'(x)
@@ -467,15 +517,11 @@ class Mul(MathObject):
                          else mul(bottom).pow_parenthesize())
         return top_string + ' / ' + bottom_string
 
-    def replace_content(self, old, new):
-        # TODO: how about something like (a*b*c*x).replace(b*c, y)?
-        return mul(obj.replace(old, new) for obj in self.objects)
+    def apply_to_content(self, func):
+        return mul(map(func, self.objects))
 
     def pow_parenthesize(self):
         return '(' + repr(self) + ')'
-
-    def may_depend_on(self, wrt):
-        return any(obj.may_depend_on(wrt) for obj in self.objects)
 
     def derivative(self, wrt):
         # d/dx (f(x)g(x)h(x)) = f'(x)g(x)h(x) + f(x)g'(x)h(x) + f(x)g(x)h'(x)
@@ -528,11 +574,8 @@ class Pow(MathObject):
         # that's why (x**y)**z must be shown with parentheses around x**y
         return '(' + repr(self) + ')'
 
-    def may_depend_on(self, wrt):
-        return self.base.may_depend_on(wrt) or self.exponent.may_depend_on(wrt)
-
-    def replace_content(self, old, new):
-        return self.base.replace(old, new) ** self.exponent.replace(old, new)
+    def apply_to_content(self, func):
+        return pow(func(self.base), func(self.exponent))
 
     def derivative(self, wrt):
         # _explog.py wants lots of stuff from this file

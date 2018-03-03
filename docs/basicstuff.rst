@@ -49,7 +49,7 @@ objects and not Python ints:
 >>> type(2)
 <class 'int'>
 
-Every time we did ``2*x``, derivater converted the ``2`` into
+When we did ``2*x``, derivater converted the ``2`` into
 ``derivater.Integer(2)``. It looks a lot like a Python int, but it's not; it
 has additional methods that derivater needs:
 
@@ -63,26 +63,10 @@ AttributeError: 'int' object has no attribute 'derivative'
 .. autofunction:: mathify
 
 
-Constants
----------
-
-.. data:: e
-
-    Euler's number, approximately 2.718281828459045.
-
-.. data:: tau
-
-    A full turn in radians, approximately 6.283185307179586.
-
-.. data:: pi
-
-    A convenient way to write ``tau/2``.
-
-
 add, mul and pow
 ----------------
 
-Usually it's easiest to do e.g. ``a + b`` instead of ``derivater.add(a, b)``,
+Usually it's easiest to do e.g. ``a + b`` instead of ``derivater.add([a, b])``,
 but these functions can be faster if you want to e.g. add together a long list
 of things. Using ``+``, ``-``, ``*``, ``/`` and ``**`` operators with
 :class:`MathObjects <MathObject>` just calls these functions.

@@ -33,8 +33,7 @@ class NamedConstant(MathObject):
     def __repr__(self):
         return self.name
 
-    def may_depend_on(self, var):   # enough for derivative() to work
-        return False
+    # may_depend_on() returns False by default
 
 
 e = NamedConstant('e')

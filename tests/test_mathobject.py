@@ -35,13 +35,19 @@ def test_replace():
 
 
 class Toot(MathObject):
+    def __repr__(self):
+        return '<Toot>'
     def may_depend_on(self, var):
-        return (var == 'x')
+        return (var == y)
 
 
 def test_default_may_depend_on_and_derivative():
-    assert MathObject().may_depend_on(x)      # True by default
-    assert Toot().derivative(y) == mathify(0)
+    assert not MathObject().may_depend_on(x)    # must be overrided if depdends
+
+    assert not Toot().may_depend_on(x)
+    assert Toot().may_depend_on(y)
+    assert Toot().derivative(x) == mathify(0)
     with pytest.raises(TypeError,
-                       match="cannot take derivative of MathObject$"):
-        MathObject().derivative(x)
+                       match=("cannot take derivative of <Toot> "
+                              "with respect to y$")):
+        Toot().derivative(y)
