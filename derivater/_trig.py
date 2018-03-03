@@ -20,7 +20,7 @@ class sin(MathObject):
     """The sine function.
 
     >>> sin(2*x + 1)
-    2*x + 1
+    sin(2*x + 1)
     >>> sin(2*x + 1).derivative(x)
     2*cos(2*x + 1)
     """

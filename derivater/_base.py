@@ -259,7 +259,7 @@ class SymbolFunction(MathObject):
     f''(x)
     >>> f(x, derivative_count=2)
     f''(x)
-    >>> f(x).derivative().derivative()
+    >>> f(x).derivative(x).derivative(x)
     f''(x)
     >>> (f(x) * g(x)).derivative(x)
     f'(x)*g(x) + g'(x)*f(x)

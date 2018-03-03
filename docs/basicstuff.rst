@@ -54,7 +54,7 @@ Every time we did ``2*x``, derivater converted the ``2`` into
 has additional methods that derivater needs:
 
 >>> Integer(2).derivative(x)
-False
+0
 >>> 2 .derivative(x)
 Traceback (most recent call last):
   ...
