@@ -19,7 +19,7 @@ def exp(exponent):
     return e**exponent
 
 
-@eq_and_hash(['numerus'])
+@eq_and_hash({'numerus': None})
 class NaturalLog(MathObject):
     """The type of many objects returned by :func:`ln`.
 
@@ -38,6 +38,9 @@ class NaturalLog(MathObject):
     def __repr__(self):
         return 'ln(%r)' % self.numerus
 
+    def replace_content(self, old, new):
+        return ln(self.numerus.replace(old, new))
+
     # explicit is better than implicit, (ln(a))**b is better than ln(a)**b
     def pow_parenthesize(self):
         return '(' + repr(self) + ')'
@@ -50,12 +53,6 @@ class NaturalLog(MathObject):
         # d/dx ln(f(x)) = ------ * f'(x) = f'(x) / f(x)
         #                  f(x)
         return self.numerus.derivative(wrt) / self.numerus
-
-    def replace(self, old, new):
-        old, new = mathify(old), mathify(new)
-        if self == old:
-            return new
-        return ln(self.numerus.replace(old, new))
 
 
 def ln(numerus):

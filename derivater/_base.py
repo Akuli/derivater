@@ -1,7 +1,7 @@
 import collections
 
 
-def eq_and_hash(as_is=(), tupled=()):
+def eq_and_hash(converters):
     """A decorator that adds ``__eq__`` and ``__hash__`` methods to a class.
 
     If you want to make a :class:`MathObject` subclass that is used like
@@ -27,29 +27,35 @@ def eq_and_hash(as_is=(), tupled=()):
                 if not isinstance(other, Toot):
                     return NotImplemented
                 return (self.a == other.a and self.b == other.b and
-                        self.cdlist == other.cdlist)
+                        set(self.cdlist) == set(other.cdlist))
 
             def __hash__(self):
-                # reuse tuple's __hash__, but convert cdlist to a tuple
+                # reuse tuple's __hash__, but convert cdlist to a frozenset
                 # because lists aren't hashable
-                return hash((self.a, self.b, tuple(self.cdlist)))
+                return hash((self.a, self.b, frozenset(self.cdlist)))
 
     ...or like this::
 
-        @derivater.eq_and_hash(['a', 'b'], tupled=['cdlist'])
+        @derivater.eq_and_hash({'a': None, 'b': None, 'cdlist': frozenset})
         class Toot(derivater.MathObject):
 
             def __init__(self, a, b, bclist):
                 self.a = a
                 self.b = b
                 self.cdlist = cdlist
+
+    Here ``'a': None, 'b': None`` means that ``a`` and ``b`` will be hashed and
+    equal compared as is, and ``cdlist=frozenset`` means that
+    ``frozenset(cdlist)`` will be used when hashing and comparing ``cdlist``.
+    This means that it doesn't matter which order things are in, but any
+    duplicates are ignored.
     """
     def get_stuff(instance):
         result = []
-        for attr in as_is:
-            result.append(getattr(instance, attr))
-        for attr in tupled:
-            result.append(tuple(getattr(instance, attr)))
+        for attr, converter in sorted(converters.items()):      # sort by keys
+            if converter is None:
+                converter = (lambda thing: thing)       # noqa
+            result.append(converter(getattr(instance, attr)))
         return tuple(result)
 
     def decorate(klass):
@@ -138,9 +144,43 @@ class MathObject:
         return True
 
     def replace(self, old, new):
+        """Replace parts of the math object with another.
+
+        MathObjects are never mutated, so this always returns a new object
+
+        >>> ln(2*x).replace(2*x, y)
+        ln(y)
+        >>> x.replace(x, y)
+        y
+        >>> ln(2).replace(x, y)    # nothing happens
+        ln(2)
+
+        Don't override this method in a custom class; override
+        :meth:`replace_content` instead.
+        """
         old, new = mathify(old), mathify(new)
         if self == old:
             return new
+        return self.replace_content(old, new)
+
+    def replace_content(self, old, new):
+        """If this object contains more MathObjects nested, this should call t\
+heir :meth:`replace` methods.
+
+        Usually it's best to use :meth:`replace` instead of calling this method
+        directly. You can assume that *old* and *new* are already mathified
+        when overriding this, and you must mathify *old* and *new* when calling
+        this.
+
+        >>> (x + y).replace(x, a)
+        a + y
+        >>> (x + y).replace(x + y, a)
+        a
+        >>> (x + y).replace_content(x, a)
+        a + y
+        >>> (x + y).replace_content(x + y, a)   # this is the difference
+        x + y
+        """
         return self
 
     # everything except stuff with wrt in it are constants
@@ -185,7 +225,7 @@ class MathObject:
         return pow(other, self)
 
 
-@eq_and_hash(['name'])
+@eq_and_hash({'name': None})
 class Symbol(MathObject):
     """A symbol like ``x`` or ``y``.
 
@@ -208,33 +248,21 @@ class Symbol(MathObject):
     """
 
     def __init__(self, name):
-        if not isinstance(name, str):
-            raise TypeError("Symbol(%s)" % type(name).__name__)
         self.name = name
 
     def __repr__(self):
         return self.name
-
-    # two symbols with same name are considered equal, temporary symbols
-    # that don't do this (see sympy's Dummy class) may be needed later
-    def __eq__(self, other):
-        if isinstance(other, Symbol):
-            return self.name == other.name
-        return NotImplemented
-
-    def __hash__(self):
-        return hash(self.name)
 
     def may_depend_on(self, other_symbol):
         return (self == other_symbol)
 
     def derivative(self, wrt):
         if wrt == self:
-            return 1
-        else:
-            return 0
+            return mathify(1)
+        return mathify(0)
 
 
+@eq_and_hash({'name': None, 'arg': None, 'derivative_count': None})
 class SymbolFunction(MathObject):
     """Represents an unknown, single-variable function.
 
@@ -242,25 +270,37 @@ class SymbolFunction(MathObject):
     >>> x = Symbol('x')
     >>> SymbolFunction('f', x)
     f(x)
-    >>> SymbolFunction('g', x)
-    g(x)
+    >>> SymbolFunction('g', x, derivative_count=2)
+    g''(x)
 
-    Use :func:`functools.partial` if you want to type ``f(x)`` to get ``f(x)``:
+    By default, ``derivater.__main__`` contains functions defined like this::
 
-    >>> from functools import partial
-    >>> f = partial(SymbolFunction, 'f')
-    >>> g = partial(SymbolFunction, 'g')
+        from functools import partial
+        f = partial(SymbolFunction, 'f')
+        g = partial(SymbolFunction, 'g')
+
+    This means that you can type ``f(x)`` to get ``f(x)``.
+
     >>> f(x)
     f(x)
 
-    You can e.g. take derivatives of SymbolFunctions nicely.
+    There are also ``f_`` and ``g_`` defined like this...
 
-    >>> SymbolFunction('f', x, derivative_count=2)
-    f''(x)
-    >>> f(x, derivative_count=2)
-    f''(x)
+    ::
+        f_ = partial(f, derivative_count=1)
+        g_ = partial(g, derivative_count=1)
+
+    ...so you can do this:
+
+    >>> f_(x)
+    f'(x)
+
+    More derivative examples:
+
     >>> f(x).derivative(x).derivative(x)
     f''(x)
+    >>> f(x).derivative(x).derivative(x).derivative_count
+    2
     >>> (f(x) * g(x)).derivative(x)
     f'(x)*g(x) + g'(x)*f(x)
     >>> f(g(x)).derivative(x)
@@ -269,12 +309,18 @@ class SymbolFunction(MathObject):
 
     def __init__(self, name, arg, *, derivative_count=0):
         self.name = name
-        self.arg = arg
+        self.arg = mathify(arg)
+        if derivative_count < 0:
+            raise ValueError("negative derivative_count is not supported")
         self.derivative_count = derivative_count
 
     def __repr__(self):
         return '%s%s(%r)' % (
             self.name, "'" * self.derivative_count, self.arg)
+
+    def replace_content(self, old, new):
+        return SymbolFunction(self.name, self.arg.replace(old, new),
+                              derivative_count=self.derivative_count)
 
     def may_depend_on(self, wrt):
         return self.arg.may_depend_on(wrt)
@@ -286,7 +332,7 @@ class SymbolFunction(MathObject):
 
 
 # low-level integer
-@eq_and_hash(['python_int'])
+@eq_and_hash({'python_int': None})
 class Integer(MathObject):
     """An integer with a known value.
 
@@ -300,14 +346,6 @@ class Integer(MathObject):
 
     def __repr__(self):
         return str(self.python_int)
-
-    def __eq__(self, other):
-        if isinstance(other, Integer):
-            return self.python_int == other.python_int
-        return super().__eq__(other)
-
-    def __hash__(self):
-        return hash(self.python_int)
 
     def may_depend_on(self, var):   # enough for derivative() to work
         return False
@@ -327,7 +365,7 @@ def _looks_like_negative(expr):
     return False
 
 
-@eq_and_hash(tupled=['objects'])
+@eq_and_hash({'objects': frozenset})
 class Add(MathObject):
     """An object that represents a bunch of things added together.
 
@@ -365,24 +403,14 @@ class Add(MathObject):
                 result.append(obj.add_parenthesize())
         return ''.join(result)
 
-    def __eq__(self, other):
-        if not isinstance(other, Add):
-            return NotImplemented
-        return self.objects == other.objects
-
-    def __hash__(self):
-        return hash(tuple(self.objects))
-
     def mul_parenthesize(self):
         return '(' + repr(self) + ')'
 
     def may_depend_on(self, wrt):
         return any(obj.may_depend_on(wrt) for obj in self.objects)
 
-    def replace(self, old, new):
-        old, new = mathify(old), mathify(new)
-        if self == old:
-            return new
+    def replace_content(self, old, new):
+        # TODO: how about something like (a+b+c+x).replace(b+c, y)?
         return add(obj.replace(old, new) for obj in self.objects)
 
     def derivative(self, wrt):
@@ -391,7 +419,7 @@ class Add(MathObject):
         return add(obj.derivative(wrt) for obj in self.objects)
 
 
-@eq_and_hash(tupled=['objects'])
+@eq_and_hash({'objects': frozenset})
 class Mul(MathObject):
     """An object that represents a bunch of stuff multiplied with each other.
 
@@ -415,8 +443,6 @@ class Mul(MathObject):
         self.objects = objects
 
     def __repr__(self):
-        # TODO: a/b is represented as a*b**(-1), maybe display them with
-        # division here?
         if _looks_like_negative(self):
             return '-' + (-self).mul_parenthesize()
 
@@ -434,31 +460,22 @@ class Mul(MathObject):
             assert len(top) >= 2
             return '*'.join(obj.mul_parenthesize() for obj in top)
 
-        top_string = (top[0].mul_parenthesize() if len(top) == 1
-                      else mul(top).pow_parenthesize())
+        # the top uses mul_parenthesize() instead of repr() because otherwise
+        # repr((x + y)/z) == 'x + y / z'
+        top_string = mul(top).mul_parenthesize()
         bottom_string = (bottom[0].mul_parenthesize() if len(bottom) == 1
                          else mul(bottom).pow_parenthesize())
         return top_string + ' / ' + bottom_string
 
-    def __eq__(self, other):
-        if not isinstance(other, Mul):
-            return NotImplemented
-        return self.objects == other.objects
-
-    def __hash__(self):
-        return hash(tuple(self.objects))
+    def replace_content(self, old, new):
+        # TODO: how about something like (a*b*c*x).replace(b*c, y)?
+        return mul(obj.replace(old, new) for obj in self.objects)
 
     def pow_parenthesize(self):
         return '(' + repr(self) + ')'
 
     def may_depend_on(self, wrt):
         return any(obj.may_depend_on(wrt) for obj in self.objects)
-
-    def replace(self, old, new):
-        old, new = mathify(old), mathify(new)
-        if self == old:
-            return new
-        return mul(obj.replace(old, new) for obj in self.objects)
 
     def derivative(self, wrt):
         # d/dx (f(x)g(x)h(x)) = f'(x)g(x)h(x) + f(x)g'(x)h(x) + f(x)g(x)h'(x)
@@ -475,7 +492,7 @@ class Mul(MathObject):
 #   * (x**y)**z is not allowed, must be converted to x**(y*z)
 #   * base and exponent must not be 1
 #   * division is represented with Pow(x, mathify(-1))
-@eq_and_hash(['base', 'exponent'])
+@eq_and_hash({'base': None, 'exponent': None})
 class Pow(MathObject):
     """An object that represents ``base ** exponent``.
 
@@ -514,10 +531,7 @@ class Pow(MathObject):
     def may_depend_on(self, wrt):
         return self.base.may_depend_on(wrt) or self.exponent.may_depend_on(wrt)
 
-    def replace(self, old, new):
-        old, new = mathify(old), mathify(new)
-        if self == old:
-            return new
+    def replace_content(self, old, new):
         return self.base.replace(old, new) ** self.exponent.replace(old, new)
 
     def derivative(self, wrt):

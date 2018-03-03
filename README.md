@@ -14,27 +14,14 @@ Or like this if you are on Windows:
 
     py -im derivater
 
-That is roughly equivalent to starting Python normally and then doing this:
-
-```python
->>> import functools
->>> from derivater import *
->>> a = Symbol('a')
->>> b = Symbol('b')
->>> c = Symbol('c')
->>> f = functools.partial(SymbolFunction, 'f')
->>> g = functools.partial(SymbolFunction, 'g')
->>> x = Symbol('x')
->>> y = Symbol('y')
->>> z = Symbol('z')
-```
-
 If you can't get the `-im` trick to work, you can just start Python normally
 and do this:
 
 ```python
 >>> from derivater.__main__ import *
 ```
+
+This brings a bunch of convenience things into the current namespace.
 
 Symbols are, of course, an important thing in a symbolic calculation library.
 
@@ -45,7 +32,15 @@ Symbols are, of course, an important thing in a symbolic calculation library.
 x + y
 ```
 
-You can `+`, `-`, `*`, `/` or `**` symbols however you want:
+`x`, `y` and `z` are defined in `derivater.__main__` like this:
+
+```python
+x = derivater.Symbol('x')
+y = derivater.Symbol('y')
+z = derivater.Symbol('z')
+```
+
+You can `+`, `-`, `*`, `/` or `**` symbols however you want.
 
 ```python
 >>> x * x * x
@@ -79,7 +74,8 @@ e**x
 ((sin(x))**2) / ((cos(x))**2) + 1
 ```
 
-You can also mix in SymbolFunctions like `f` and `g` with no restrictions:
+You can also mix in SymbolFunctions like `f` and `g` in `__main__.py` with no
+restrictions:
 
 ```python
 >>> ln(f(x)).derivative(x)
@@ -87,3 +83,5 @@ f'(x) / f(x)
 >>> f(g(x)).derivative(x)
 f'(g(x))*g'(x)
 ```
+
+See [the docs](https://akuli.github.io/derivater/) for more info!

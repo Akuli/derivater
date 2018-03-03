@@ -3,10 +3,7 @@ from derivater._base import MathObject, eq_and_hash, mathify
 
 def trig_func_class(klass):
     def replace(self, old, new):
-        old, new = mathify(old), mathify(new)
-        if self == old:
-            return new
-        return sin(self.arg.replace(old, new))
+        return klass(self.arg.replace(old, new))
 
     klass.__repr__ = lambda self: '%s(%r)' % (klass.__name__, self.arg)
     klass.pow_parenthesize = lambda self: '(' + repr(self) + ')'
@@ -14,7 +11,7 @@ def trig_func_class(klass):
     return klass
 
 
-@eq_and_hash(['arg'])
+@eq_and_hash({'arg': None})
 @trig_func_class
 class sin(MathObject):
     """The sine function.
@@ -32,7 +29,7 @@ class sin(MathObject):
         return cos(self.arg) * self.arg.derivative(wrt)
 
 
-@eq_and_hash(['arg'])
+@eq_and_hash({'arg': None})
 @trig_func_class
 class cos(MathObject):
     """The complement sine function, mathematically equal to ``sin(tau/4 - arg\
@@ -49,7 +46,7 @@ class cos(MathObject):
         return -sin(self.arg) * self.arg.derivative(wrt)
 
 
-@eq_and_hash(['arg'])
+@eq_and_hash({'arg': None})
 @trig_func_class
 class tan(MathObject):
     """The tangent function, mathematically equal to ``sin(arg) / cos(arg)``.
