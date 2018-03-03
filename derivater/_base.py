@@ -434,8 +434,11 @@ class Mul(MathObject):
             assert len(top) >= 2
             return '*'.join(obj.mul_parenthesize() for obj in top)
 
-        return (mul(top).pow_parenthesize() + ' / ' +
-                mul(bottom).pow_parenthesize())
+        top_string = (top[0].mul_parenthesize() if len(top) == 1
+                      else mul(top).pow_parenthesize())
+        bottom_string = (bottom[0].mul_parenthesize() if len(bottom) == 1
+                         else mul(bottom).pow_parenthesize())
+        return top_string + ' / ' + bottom_string
 
     def __eq__(self, other):
         if not isinstance(other, Mul):
