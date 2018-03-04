@@ -8,6 +8,7 @@
     <title>Custom Math Objects and Stuff &#8212; Derivater 1.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/shit.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
@@ -208,8 +209,8 @@ all:</p>
 <p>Here’s a handy table:</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="28%" />
-<col width="72%" />
+<col width="19%" />
+<col width="81%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">This…</th>
@@ -218,25 +219,25 @@ all:</p>
 </thead>
 <tbody valign="top">
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">x</span> <span class="pre">+</span> <span class="pre">y</span></code></td>
-<td><code class="docutils literal"><span class="pre">Add([x,</span> <span class="pre">y])</span></code></td>
+<td><code class="docutils literal"><span class="pre">Add([x,</span> <span class="pre">y]).gentle_simplify()</span></code></td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">-x</span></code></td>
-<td><code class="docutils literal"><span class="pre">Mul([-1,</span> <span class="pre">x])</span></code></td>
+<td><code class="docutils literal"><span class="pre">Mul([-1,</span> <span class="pre">x]).gentle_simplify()</span></code></td>
 </tr>
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">x</span> <span class="pre">-</span> <span class="pre">y</span></code></td>
-<td><code class="docutils literal"><span class="pre">Add([x,</span> <span class="pre">Mul([-1,</span> <span class="pre">y])])</span></code></td>
+<td><code class="docutils literal"><span class="pre">Add([x,</span> <span class="pre">Mul([-1,</span> <span class="pre">y])]).gentle_simplify()</span></code></td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">x</span> <span class="pre">*</span> <span class="pre">y</span></code></td>
-<td><code class="docutils literal"><span class="pre">Mul([x,</span> <span class="pre">y])</span></code></td>
+<td><code class="docutils literal"><span class="pre">Mul([x,</span> <span class="pre">y]).gentle_simplify()</span></code></td>
 </tr>
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">1</span> <span class="pre">/</span> <span class="pre">y</span></code></td>
-<td><code class="docutils literal"><span class="pre">Pow(y,</span> <span class="pre">-1)</span></code></td>
+<td><code class="docutils literal"><span class="pre">Pow(y,</span> <span class="pre">-1).gentle_simplify()</span></code></td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal"><span class="pre">x</span> <span class="pre">/</span> <span class="pre">y</span></code></td>
-<td><code class="docutils literal"><span class="pre">Mul([x,</span> <span class="pre">Pow(y,</span> <span class="pre">-1)])</span></code></td>
+<td><code class="docutils literal"><span class="pre">Mul([x,</span> <span class="pre">Pow(y,</span> <span class="pre">-1)]).gentle_simplify()</span></code></td>
 </tr>
 <tr class="row-even"><td><code class="docutils literal"><span class="pre">x</span> <span class="pre">**</span> <span class="pre">y</span></code></td>
-<td><code class="docutils literal"><span class="pre">Pow(x,</span> <span class="pre">y)</span></code></td>
+<td><code class="docutils literal"><span class="pre">Pow(x,</span> <span class="pre">y).gentle_simplify()</span></code></td>
 </tr>
 </tbody>
 </table>

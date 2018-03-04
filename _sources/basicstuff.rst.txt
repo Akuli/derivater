@@ -1,9 +1,9 @@
-Basic Stuff
-===========
+Getting Started
+===============
 
 .. currentmodule:: derivater
 
-This page lists all functions that you'll likely end up using.
+This page contains many things that you'll likely end up using.
 
 
 Symbols
