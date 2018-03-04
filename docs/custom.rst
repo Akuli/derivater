@@ -135,17 +135,17 @@ all:
 
 Here's a handy table:
 
-==========  ==========================
+==========  ============================================
 This...     ...actually does this
-==========  ==========================
-``x + y``   ``Add([x, y])``
-``-x``      ``Mul([-1, x])``
-``x - y``   ``Add([x, Mul([-1, y])])``
-``x * y``   ``Mul([x, y])``
-``1 / y``   ``Pow(y, -1)``
-``x / y``   ``Mul([x, Pow(y, -1)])``
-``x ** y``  ``Pow(x, y)``
-==========  ==========================
+==========  ============================================
+``x + y``   ``Add([x, y]).gentle_simplify()``
+``-x``      ``Mul([-1, x]).gentle_simplify()``
+``x - y``   ``Add([x, Mul([-1, y])]).gentle_simplify()``
+``x * y``   ``Mul([x, y]).gentle_simplify()``
+``1 / y``   ``Pow(y, -1).gentle_simplify()``
+``x / y``   ``Mul([x, Pow(y, -1)]).gentle_simplify()``
+``x ** y``  ``Pow(x, y).gentle_simplify()``
+==========  ============================================
 
 .. autoclass:: Add
     :members:
