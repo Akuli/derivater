@@ -13,7 +13,7 @@ class NamedConstant(MathObject):
 
     This means that there's exactly one Euler's number, documented as :data:`e`
     above, and if you make another constant called ``e`` it won't be mistakenly
-    treated as ``1``:
+    treated as Euler's number.
 
     >>> ln(e)
     1
