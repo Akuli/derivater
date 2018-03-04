@@ -1,0 +1,4 @@
+/* don't wrap codes */
+code {
+    white-space: nowrap;
+}
