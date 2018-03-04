@@ -25,7 +25,7 @@ def test_operators():
         assert a + b == Add([a, b]).gentle_simplify()
         assert a - b == Add([a, -b]).gentle_simplify()
         assert a * b == Mul([a, b]).gentle_simplify()
-        assert a / b == a * Pow(b, -1)
+        assert a / b == Mul([a, Pow(b, -1)]).gentle_simplify()
         assert a**b == Pow(a, b).gentle_simplify()
 
 
@@ -49,6 +49,6 @@ def test_default_may_depend_on_and_derivative():
     assert Toot().may_depend_on(y)
     assert Toot().derivative(x) == mathify(0)
     with pytest.raises(TypeError,
-                       match=("cannot take derivative of <Toot> "
-                              "with respect to y$")):
+                       match=(r"cannot take derivative of <Toot> "
+                              r"with respect to y$")):
         Toot().derivative(y)

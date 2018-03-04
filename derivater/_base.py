@@ -90,9 +90,7 @@ def mathify(obj):
     raise TypeError("don't know how to mathify " + repr(obj))
 
 
-# MathObjects should be considered immutable
-# __eq__'s are not mathy equality, they just check whether two math
-# objects are considered very similar, e.g. Symbol('x') == Symbol('x')
+# TODO: the MathObject docstring is not actually used anywhere :(
 class MathObject:
     """Base class for all mathy objects.
 
@@ -303,8 +301,10 @@ to.
         0
 
         Using the ``+``, ``-``, ``*``, ``/`` and ``**`` operators with
-        MathObjects calls ``gentle_simplify()`` automagically. See
-        :ref:`this thing <addmulpow>` if you want to avoid that.
+        MathObjects calls ``gentle_simplify()`` automagically, so you can e.g.
+        do ``obj + 0`` instead of ``obj.gentle_simplify()`` if you like
+        obfuscated code. See :ref:`this thing <addmulpow>` if you want to avoid
+        automatic ``gentle_simplify()`` calls.
         """
         return self.apply_to_content(operator.methodcaller('gentle_simplify'))
 
@@ -454,7 +454,6 @@ class SymbolFunction(MathObject):
                 * self.arg.derivative(wrt))
 
 
-# low-level integer
 @eq_and_hash({'python_int': None})
 class Integer(MathObject):
     """An integer with a known value.
@@ -468,7 +467,8 @@ class Integer(MathObject):
     """
 
     def __init__(self, python_int):
-        assert isinstance(python_int, int)
+        if not isinstance(python_int, int):
+            raise TypeError("cannot create Integer of " + repr(python_int))
         self.python_int = python_int
 
     def __repr__(self):
@@ -508,8 +508,10 @@ class Add(MathObject):
         self.objects = list(map(mathify, objects))
 
     def __repr__(self):
-        result = [self.objects[0].add_parenthesize()]
+        if not self.objects:
+            return '0'
 
+        result = [self.objects[0].add_parenthesize()]
         for obj in self.objects[1:]:
             if _looks_like_negative(obj):
                 result.append(' - ')
@@ -525,6 +527,31 @@ class Add(MathObject):
 
     def mul_parenthesize(self):
         return '(' + repr(self) + ')'
+
+    # (x + y + z).replace(x + z, a) should be y+a
+    def replace(self, old, new):
+        old = mathify(old)
+        new = mathify(new)
+
+        if isinstance(old, Add):
+            if not old.objects:
+                raise ValueError(
+                    "cannot replace Add([]) by something, maybe use "
+                    "gentle_simplify() to turn Add([])'s into zeros?")
+
+            if set(old.objects).issubset(self.objects):
+                new_add_objects = self.objects.copy()
+                while set(old.objects).issubset(new_add_objects):
+                    # put the new object to the last old object's location
+                    for obj in old.objects[:-1]:
+                        new_add_objects.remove(obj)
+                    where = new_add_objects.index(old.objects[-1])
+                    new_add_objects[where] = new
+
+                # don't gently_simplify, more useful to see what happens
+                return Add(new_add_objects)
+
+        return super().replace(old, new)
 
     def derivative(self, wrt):
         # d/dx (f(x) + g(x)) = f'(x) + g'(x)
@@ -556,9 +583,6 @@ ngs:
                 flat.extend(obj.objects)
             else:
                 flat.append(obj)
-
-        for obj in flat:
-            assert obj == obj.gentle_simplify(), obj
 
         # extract integers
         int_value = 0
@@ -634,8 +658,15 @@ class Mul(MathObject):
         # the top uses mul_parenthesize() instead of repr() because otherwise
         # repr((x + y)/z) == 'x + y / z'
         top_string = repr(Mul(top))
-        bottom_string = (bottom[0].mul_parenthesize() if len(bottom) == 1
-                         else Mul(bottom).pow_parenthesize())
+
+        # Mul([Pow(x/y, -2)]) must be represented as 1 / (x**2 / y**2)
+        # changing a tiny detail in this breaks some detail in that...
+        if len(bottom) == 1:
+            bottom_string = (bottom[0].pow_parenthesize()
+                             if isinstance(bottom[0], Mul)
+                             else bottom[0].mul_parenthesize())
+        else:
+            bottom_string = Mul(bottom).pow_parenthesize()
         return top_string + ' / ' + bottom_string
 
     def apply_to_content(self, func):
@@ -644,10 +675,34 @@ class Mul(MathObject):
     def pow_parenthesize(self):
         return '(' + repr(self) + ')'
 
+    # (x*y*z).replace(x*z, a) should be y*a
+    def replace(self, old, new):
+        old = mathify(old)
+        new = mathify(new)
+
+        if isinstance(old, Mul):
+            if not old.objects:
+                raise ValueError(
+                    "cannot replace Mul([]) by something, maybe use "
+                    "gentle_simplify() to turn Mul([])'s into ones?")
+
+            if set(old.objects).issubset(self.objects):
+                new_mul_objects = self.objects.copy()
+                while set(old.objects).issubset(new_mul_objects):
+                    # put the new object to the last old object's location
+                    for obj in old.objects[:-1]:
+                        new_mul_objects.remove(obj)
+                    where = new_mul_objects.index(old.objects[-1])
+                    new_mul_objects[where] = new
+
+                # don't gently_simplify, more useful to see what happens
+                return Mul(new_mul_objects)
+
+        return super().replace(old, new)
+
     def derivative(self, wrt):
         # d/dx (f(x)g(x)h(x)) = f'(x)g(x)h(x) + f(x)g'(x)h(x) + f(x)g(x)h'(x)
-        # it works like this for more functions, derivative of each
-        # function multiplied by all other functions
+        # it works like this for more functions
         parts = []
         for i in range(len(self.objects)):      # OMG ITS RANGELEN KITTENS DIE
             parts.append(Mul(self.objects[:i] +
@@ -684,16 +739,19 @@ ngs:
             else:
                 flat.append(obj)
 
-        for obj in flat:
-            assert obj == obj.gentle_simplify(), (
-                "%r didn't simplify gently" % obj)
-
         # extract integers
         int_value = 1
         no_ints = []
         for obj in flat:
             if isinstance(obj, Integer):
                 int_value *= obj.python_int
+            # FIXME: this relies on order!
+            # in general, better support for fractions is needed >:/((
+            elif (isinstance(obj, Pow) and
+                  obj.exponent == mathify(-1) and
+                  isinstance(obj.base, Integer) and
+                  int_value % obj.base.python_int == 0):
+                int_value //= obj.base.python_int
             else:
                 no_ints.append(obj)
 
@@ -748,7 +806,11 @@ class Pow(MathObject):
 
     def __repr__(self):
         if self.exponent == mathify(-1):
-            return '1 / ' + self.base.pow_parenthesize()
+            # same code as in Mul
+            bottom_string = (self.base.pow_parenthesize()
+                             if isinstance(self.base, Mul)
+                             else self.base.mul_parenthesize())
+            return '1 / ' + bottom_string
         return (self.base.pow_parenthesize() + '**' +
                 self.exponent.pow_parenthesize())
 
@@ -815,10 +877,10 @@ ngs:
             # (x**y)**z = x**(y * z)
             return base.base ** (base.exponent * exponent)
         if isinstance(base, Mul):
-            return (Mul(obj**self.exponent for obj in self.base.objects)
+            return (Mul(obj**self.exponent for obj in base.objects)
                     .gentle_simplify())
 
-        # TODO: buts, e.g. 0**x == 0  but x != 0 ???
+        # TODO: buts, e.g. 0**x == 0  but x > 0 ???
         if base == mathify(0) and exponent == mathify(0):
             # python does this wrong, so let's blame it for the result...
             return mathify(0**0)
@@ -841,3 +903,12 @@ ngs:
 
     def simplify(self):
         return self.base.simplify() ** self.exponent.simplify()
+
+
+# TODO: update Pow.__repr__ and maybe Mul.__repr__ to show sqrt( )
+def sqrt(x):
+    """Return the square root of $x$.
+
+    This is equivalent to ``x**(mathify(1) / 2)``.
+    """
+    return x**(mathify(1) / 2)
