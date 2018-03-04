@@ -1,0 +1,413 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Basic Stuff &#8212; Derivater 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Constants" href="constants.html" />
+    <link rel="prev" title="Derivater’s Documentation" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="basic-stuff">
+<h1>Basic Stuff<a class="headerlink" href="#basic-stuff" title="Permalink to this headline">¶</a></h1>
+<p>This page lists all functions that you’ll likely end up using.</p>
+<div class="section" id="symbols">
+<h2>Symbols<a class="headerlink" href="#symbols" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="derivater.Symbol">
+<em class="property">class </em><code class="descclassname">derivater.</code><code class="descname">Symbol</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#Symbol"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.Symbol" title="Permalink to this definition">¶</a></dt>
+<dd><p>A symbol like <code class="docutils literal"><span class="pre">x</span></code> or <code class="docutils literal"><span class="pre">y</span></code>.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span>
+<span class="go">x</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">1</span> <span class="o">+</span> <span class="n">x</span><span class="o">*</span><span class="n">x</span>
+<span class="go">x**2 + 1</span>
+</pre></div>
+</div>
+<p>You can use Symbols freely with all derivater functions, but Python’s
+built-in functions don’t usually like them:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">sin(x)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">math</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="gt">Traceback (most recent call last):</span>
+  <span class="c">...</span>
+<span class="gr">TypeError</span>: <span class="n">must be real number, not Symbol</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="derivater.SymbolFunction">
+<em class="property">class </em><code class="descclassname">derivater.</code><code class="descname">SymbolFunction</code><span class="sig-paren">(</span><em>name</em>, <em>arg</em>, <em>*</em>, <em>derivative_count=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#SymbolFunction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.SymbolFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents an unknown, single-variable function.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">derivater</span> <span class="k">import</span> <span class="n">SymbolFunction</span><span class="p">,</span> <span class="n">Symbol</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">SymbolFunction</span><span class="p">(</span><span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+<span class="go">f(x)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">SymbolFunction</span><span class="p">(</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">derivative_count</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="go">g&#39;&#39;(x)</span>
+</pre></div>
+</div>
+<p>By default, <code class="docutils literal"><span class="pre">derivater.__main__</span></code> contains functions defined like this:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span>
+<span class="n">f</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">SymbolFunction</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">)</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">SymbolFunction</span><span class="p">,</span> <span class="s1">&#39;g&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This means that you can type <code class="docutils literal"><span class="pre">f(x)</span></code> to get <code class="docutils literal"><span class="pre">f(x)</span></code>.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">f(x)</span>
+</pre></div>
+</div>
+<p>There are also <code class="docutils literal"><span class="pre">f_</span></code> and <code class="docutils literal"><span class="pre">g_</span></code> defined like this…</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">f_</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">derivative_count</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">g_</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">derivative_count</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>…so you can do this:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f_</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">f&#39;(x)</span>
+</pre></div>
+</div>
+<p>More derivative examples:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">f&#39;&#39;(x)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">derivative_count</span>
+<span class="go">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">*</span> <span class="n">g</span><span class="p">(</span><span class="n">x</span><span class="p">))</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">f&#39;(x)*g(x) + f(x)*g&#39;(x)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="p">(</span><span class="n">g</span><span class="p">(</span><span class="n">x</span><span class="p">))</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">f&#39;(g(x))*g&#39;(x)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="mathobjects-and-python-objects">
+<h2>MathObjects and Python objects<a class="headerlink" href="#mathobjects-and-python-objects" title="Permalink to this headline">¶</a></h2>
+<p>Derivater represents everything as instances of subclasses of MathObjects.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span>
+<span class="go">x</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">&lt;class &#39;derivater._base.Symbol&#39;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">issubclass</span><span class="p">(</span><span class="n">Symbol</span><span class="p">,</span> <span class="n">MathObject</span><span class="p">)</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">type</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="p">)</span>
+<span class="go">&lt;class &#39;derivater._base.Mul&#39;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">issubclass</span><span class="p">(</span><span class="n">Mul</span><span class="p">,</span> <span class="n">MathObject</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>Note that I said <em>everything</em>; even integers are <a class="reference internal" href="custom.html#derivater.Integer" title="derivater.Integer"><code class="xref py py-class docutils literal"><span class="pre">derivater.Integer</span></code></a>
+objects and not Python ints:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">objects</span>
+<span class="go">[2, x]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="go">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">type</span><span class="p">((</span><span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="go">&lt;class &#39;derivater._base.Integer&#39;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Integer</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="go">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">type</span><span class="p">(</span><span class="n">Integer</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+<span class="go">&lt;class &#39;derivater._base.Integer&#39;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2</span>
+<span class="go">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">type</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="go">&lt;class &#39;int&#39;&gt;</span>
+</pre></div>
+</div>
+<p>When we did <code class="docutils literal"><span class="pre">2*x</span></code>, derivater converted the <code class="docutils literal"><span class="pre">2</span></code> into
+<code class="docutils literal"><span class="pre">derivater.Integer(2)</span></code>. It looks a lot like a Python int, but it’s not; it
+has additional methods that derivater needs:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Integer</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2</span> <span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="gt">Traceback (most recent call last):</span>
+  <span class="c">...</span>
+<span class="gr">AttributeError</span>: <span class="n">&#39;int&#39; object has no attribute &#39;derivative&#39;</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>All derivater classes have all methods that MathObject has, so if there’s
+some documentation for <code class="docutils literal"><span class="pre">MathObject.toot()</span></code>, you can do e.g. <code class="docutils literal"><span class="pre">x.toot()</span></code>,
+<code class="docutils literal"><span class="pre">(2*x).toot()</span></code> or <code class="docutils literal"><span class="pre">ln(2).toot()</span></code>.</p>
+<p class="last">There’s a list of MathObject methods <a class="reference internal" href="#mathobject-methods"><span class="std std-ref">below</span></a>.</p>
+</div>
+<dl class="function">
+<dt id="derivater.mathify">
+<code class="descclassname">derivater.</code><code class="descname">mathify</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#mathify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.mathify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a Python number into a MathObject.</p>
+<p>If <em>obj</em> is already a MathObject, it’s returned as is.</p>
+</dd></dl>
+
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Don’t mutate math objects even if they use a mutable data structure like a
+list. Make a new, slightly different math object instead.</p>
+</div>
+</div>
+<div class="section" id="simplifying">
+<h2>Simplifying<a class="headerlink" href="#simplifying" title="Permalink to this headline">¶</a></h2>
+<p>MathObjects provide two ways to simplify stuff:</p>
+<dl class="method">
+<dt id="derivater.MathObject.gentle_simplify">
+<code class="descclassname">MathObject.</code><code class="descname">gentle_simplify</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#MathObject.gentle_simplify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.MathObject.gentle_simplify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Try to make the object look simpler.</p>
+<p>Usually there’s a simple, structury class with a Capitalized name, and
+a convenient constructor function with a lowercase name (often shorter)
+that creates an instance of the class and calls <code class="docutils literal"><span class="pre">gentle_simplify()</span></code>.
+Like this:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">NaturalLog</span><span class="p">:</span>
+    <span class="o">...</span>
+
+<span class="k">def</span> <span class="nf">ln</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">NaturalLog</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>This way you can conveniently take a logarithm with <a class="reference internal" href="explog.html#derivater.ln" title="derivater.ln"><code class="xref py py-func docutils literal"><span class="pre">ln()</span></code></a>, but if
+you don’t want to automagically convert things like <code class="docutils literal"><span class="pre">ln(1)</span></code> into
+<code class="docutils literal"><span class="pre">0</span></code>, you can use <a class="reference internal" href="explog.html#derivater.NaturalLog" title="derivater.NaturalLog"><code class="xref py py-class docutils literal"><span class="pre">NaturalLog</span></code></a> directly.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ln</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>           <span class="c1"># returns mathify(0)</span>
+<span class="go">0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">NaturalLog</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>   <span class="c1"># returns a NaturalLog object</span>
+<span class="go">ln(1)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">NaturalLog</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()</span>
+<span class="go">0</span>
+</pre></div>
+</div>
+<p>Using the <code class="docutils literal"><span class="pre">+</span></code>, <code class="docutils literal"><span class="pre">-</span></code>, <code class="docutils literal"><span class="pre">*</span></code>, <code class="docutils literal"><span class="pre">/</span></code> and <code class="docutils literal"><span class="pre">**</span></code> operators with
+MathObjects calls <code class="docutils literal"><span class="pre">gentle_simplify()</span></code> automagically. See
+<a class="reference internal" href="custom.html#addmulpow"><span class="std std-ref">this thing</span></a> if you want to avoid that.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="derivater.MathObject.simplify">
+<code class="descclassname">MathObject.</code><code class="descname">simplify</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#MathObject.simplify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.MathObject.simplify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make the object look as simple as possible.</p>
+<p>This is like <a class="reference internal" href="#derivater.MathObject.gentle_simplify" title="derivater.MathObject.gentle_simplify"><code class="xref py py-meth docutils literal"><span class="pre">gentle_simplify()</span></code></a>, but more aggressive and usually
+not called automatically.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="more-mathobject-methods">
+<span id="mathobject-methods"></span><h2>More MathObject Methods<a class="headerlink" href="#more-mathobject-methods" title="Permalink to this headline">¶</a></h2>
+<p>Some of this documentation talks about <em>overriding</em>. You can ignore all that if
+you don’t know what overriding is. However, if you are implementing a custom
+MathObject subclass and you are  are interested in the overriding stuff, also
+check out <a class="reference internal" href="custom.html#custom"><span class="std std-ref">this customizing guide</span></a>.</p>
+<dl class="method">
+<dt id="derivater.MathObject.derivative">
+<code class="descclassname">MathObject.</code><code class="descname">derivative</code><span class="sig-paren">(</span><em>wrt</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#MathObject.derivative"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.MathObject.derivative" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the derivative with respect to <em>wrt</em>.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">cos(x)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sin</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>      <span class="c1"># Symbols are independent</span>
+<span class="go">0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sin</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">))</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>   <span class="c1"># but SymbolFunctions work better</span>
+<span class="go">cos(f(x))*f&#39;(x)</span>
+</pre></div>
+</div>
+<p>The <em>wrt</em> must be a <a class="reference internal" href="#derivater.Symbol" title="derivater.Symbol"><code class="xref py py-class docutils literal"><span class="pre">Symbol</span></code></a>.</p>
+<p>If you override this, remember the chain rule! For example,
+<a class="reference internal" href="explog.html#derivater.NaturalLog" title="derivater.NaturalLog"><code class="xref py py-class docutils literal"><span class="pre">NaturalLog</span></code></a> does something like this…</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">numerus</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">numerus</span> <span class="o">=</span> <span class="n">mathify</span><span class="p">(</span><span class="n">numerus</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">derivative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wrt</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">numerus</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">numerus</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">wrt</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>…so we get this:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ln</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>     <span class="c1"># 1/x * x.derivative(x)</span>
+<span class="go">1 / x</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ln</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">))</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># 1/f(x) * f(x).derivative(x)</span>
+<span class="go">f&#39;(x) / f(x)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ln</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>     <span class="c1"># 1/mathify(2) * mathify(2).derivative(x)</span>
+<span class="go">0</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="derivater.MathObject.may_depend_on">
+<code class="descclassname">MathObject.</code><code class="descname">may_depend_on</code><span class="sig-paren">(</span><em>var</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#MathObject.may_depend_on"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.MathObject.may_depend_on" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if this variable depends on the value of <em>var</em>.</p>
+<p>The <em>var</em> must be a <a class="reference internal" href="#derivater.Symbol" title="derivater.Symbol"><code class="xref py py-class docutils literal"><span class="pre">Symbol</span></code></a>.</p>
+<p>By default, this checks if the content depends on anything using
+<a class="reference internal" href="#derivater.MathObject.apply_to_content" title="derivater.MathObject.apply_to_content"><code class="xref py py-meth docutils literal"><span class="pre">apply_to_content()</span></code></a>, and returns False if there is no content. If
+you think you need to override this, you may want to override
+<a class="reference internal" href="#derivater.MathObject.apply_to_content" title="derivater.MathObject.apply_to_content"><code class="xref py py-meth docutils literal"><span class="pre">apply_to_content()</span></code></a> instead.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="derivater.MathObject.replace">
+<code class="descclassname">MathObject.</code><code class="descname">replace</code><span class="sig-paren">(</span><em>old</em>, <em>new</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#MathObject.replace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.MathObject.replace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace parts of the math object with another.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ln</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="go">ln(3)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="go">y</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ln</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>    <span class="c1"># nothing happens</span>
+<span class="go">ln(2)</span>
+</pre></div>
+</div>
+<p>If you think you want to override this, you may want to override
+<a class="reference internal" href="#derivater.MathObject.apply_to_content" title="derivater.MathObject.apply_to_content"><code class="xref py py-meth docutils literal"><span class="pre">apply_to_content()</span></code></a> instead; this method is implemented with
+<a class="reference internal" href="#derivater.MathObject.apply_recursively" title="derivater.MathObject.apply_recursively"><code class="xref py py-meth docutils literal"><span class="pre">apply_recursively()</span></code></a>, and that uses <a class="reference internal" href="#derivater.MathObject.apply_to_content" title="derivater.MathObject.apply_to_content"><code class="xref py py-meth docutils literal"><span class="pre">apply_to_content()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="derivater.MathObject.apply_to_content">
+<code class="descclassname">MathObject.</code><code class="descname">apply_to_content</code><span class="sig-paren">(</span><em>func</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#MathObject.apply_to_content"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.MathObject.apply_to_content" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a new object with <em>func</em> applied to every object that this object contains.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">two_times</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="mi">2</span><span class="o">*</span><span class="n">obj</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">*</span><span class="n">z</span><span class="p">)</span><span class="o">.</span><span class="n">apply_to_content</span><span class="p">(</span><span class="n">two_times</span><span class="p">)</span>
+<span class="go">2*x + 2*y*z</span>
+</pre></div>
+</div>
+<p>Override this if your object contains something. For example,
+<a class="reference internal" href="explog.html#derivater.NaturalLog" title="derivater.NaturalLog"><code class="xref py py-class docutils literal"><span class="pre">NaturalLog</span></code></a> does something like this:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">numerus</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">numerus</span> <span class="o">=</span> <span class="n">mathify</span><span class="p">(</span><span class="n">numerus</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">apply_to_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">ln</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numerus</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>By default, this returns <em>self</em> unchanged.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="derivater.MathObject.apply_recursively">
+<code class="descclassname">MathObject.</code><code class="descname">apply_recursively</code><span class="sig-paren">(</span><em>func</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#MathObject.apply_recursively"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.MathObject.apply_recursively" title="Permalink to this definition">¶</a></dt>
+<dd><p>A recursive version of <a class="reference internal" href="#derivater.MathObject.apply_to_content" title="derivater.MathObject.apply_to_content"><code class="xref py py-func docutils literal"><span class="pre">apply_to_content()</span></code></a>.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">Lol</span><span class="p">(</span><span class="n">MathObject</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">content</span><span class="p">):</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="n">content</span>
+<span class="gp">... </span>    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="s1">&#39;Lol(</span><span class="si">%r</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="o">*</span><span class="n">z</span><span class="p">)</span><span class="o">.</span><span class="n">apply_recursively</span><span class="p">(</span><span class="n">Lol</span><span class="p">)</span>
+<span class="go">Lol(Lol(x) + Lol(Lol(y)*Lol(z)))</span>
+</pre></div>
+</div>
+<p>This function is implemented with <a class="reference internal" href="#derivater.MathObject.apply_to_content" title="derivater.MathObject.apply_to_content"><code class="xref py py-func docutils literal"><span class="pre">apply_to_content()</span></code></a>, so you
+might want to override <a class="reference internal" href="#derivater.MathObject.apply_to_content" title="derivater.MathObject.apply_to_content"><code class="xref py py-func docutils literal"><span class="pre">apply_to_content()</span></code></a> instead if you think
+you need to override this function.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="derivater.MathObject.get_content">
+<code class="descclassname">MathObject.</code><code class="descname">get_content</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#MathObject.get_content"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.MathObject.get_content" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of the content that <a class="reference internal" href="#derivater.MathObject.apply_to_content" title="derivater.MathObject.apply_to_content"><code class="xref py py-func docutils literal"><span class="pre">apply_to_content()</span></code></a> applies to.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">get_content</span><span class="p">()</span>
+<span class="go">[x, y]</span>
+</pre></div>
+</div>
+<p>This is implemented with <a class="reference internal" href="#derivater.MathObject.apply_to_content" title="derivater.MathObject.apply_to_content"><code class="xref py py-func docutils literal"><span class="pre">apply_to_content()</span></code></a>, so usually you don’t
+need to override this. Just override <a class="reference internal" href="#derivater.MathObject.apply_to_content" title="derivater.MathObject.apply_to_content"><code class="xref py py-func docutils literal"><span class="pre">apply_to_content()</span></code></a> instead.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Basic Stuff</a><ul>
+<li><a class="reference internal" href="#symbols">Symbols</a></li>
+<li><a class="reference internal" href="#mathobjects-and-python-objects">MathObjects and Python objects</a></li>
+<li><a class="reference internal" href="#simplifying">Simplifying</a></li>
+<li><a class="reference internal" href="#more-mathobject-methods">More MathObject Methods</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Derivater’s Documentation</a></li>
+      <li>Next: <a href="constants.html" title="next chapter">Constants</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/basicstuff.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Akuli.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/basicstuff.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

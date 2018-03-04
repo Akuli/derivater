@@ -1,0 +1,927 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>derivater._base &#8212; Derivater 1.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for derivater._base</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">collections</span>
+<span class="kn">import</span> <span class="nn">operator</span>
+
+
+<div class="viewcode-block" id="eq_and_hash"><a class="viewcode-back" href="../../custom.html#derivater.eq_and_hash">[docs]</a><span class="k">def</span> <span class="nf">eq_and_hash</span><span class="p">(</span><span class="n">converters</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A decorator that adds ``__eq__`` and ``__hash__`` methods to a class.</span>
+
+<span class="sd">    If you want to make a MathObject subclass that is used like</span>
+<span class="sd">    this...</span>
+<span class="sd">    ::</span>
+
+<span class="sd">        t = Toot(a, b, [c, d])</span>
+
+<span class="sd">    ...then you should also implement ``__eq__`` and ``__hash__``. They should</span>
+<span class="sd">    treat the objects as equal when they are identical (not just same value),</span>
+<span class="sd">    e.g. ``ln(x**2) == ln(x**2)`` and ``hash(ln(x**2)) == hash(ln(x**2))``, but</span>
+<span class="sd">    ``ln(x**2) != 2*ln(x)`` and ``hash(ln(x**2)) != hash(2*ln(x))``. So, our</span>
+<span class="sd">    ``Toot`` class can be written like this...</span>
+<span class="sd">    ::</span>
+
+<span class="sd">        class Toot(derivater.MathObject):</span>
+
+<span class="sd">            def __init__(self, a, b, cdlist):</span>
+<span class="sd">                self.a = a</span>
+<span class="sd">                self.b = b</span>
+<span class="sd">                self.cdlist = cdlist</span>
+
+<span class="sd">            def __eq__(self, other):</span>
+<span class="sd">                if not isinstance(other, Toot):</span>
+<span class="sd">                    return NotImplemented</span>
+<span class="sd">                # convert self.cdlist to a set so its order</span>
+<span class="sd">                # doesn&#39;t matter</span>
+<span class="sd">                return (self.a == other.a and self.b == other.b and</span>
+<span class="sd">                        set(self.cdlist) == set(other.cdlist))</span>
+
+<span class="sd">            def __hash__(self):</span>
+<span class="sd">                # reuse tuple&#39;s __hash__, but convert cdlist</span>
+<span class="sd">                # to a frozenset because sets aren&#39;t hashable</span>
+<span class="sd">                return hash((self.a, self.b, frozenset(self.cdlist)))</span>
+
+<span class="sd">    ...or like this::</span>
+
+<span class="sd">        @derivater.eq_and_hash({&#39;a&#39;: None, &#39;b&#39;: None, &#39;cdlist&#39;: frozenset})</span>
+<span class="sd">        class Toot(derivater.MathObject):</span>
+
+<span class="sd">            def __init__(self, a, b, bclist):</span>
+<span class="sd">                self.a = a</span>
+<span class="sd">                self.b = b</span>
+<span class="sd">                self.cdlist = cdlist</span>
+
+<span class="sd">    Here ``&#39;a&#39;: None, &#39;b&#39;: None`` means that ``a`` and ``b`` will be hashed and</span>
+<span class="sd">    equal compared as is, and ``cdlist=frozenset`` means that</span>
+<span class="sd">    ``frozenset(cdlist)`` will be used when hashing and comparing ``cdlist``.</span>
+<span class="sd">    This means that it doesn&#39;t matter which order things are in, but any</span>
+<span class="sd">    duplicates are ignored.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">get_stuff</span><span class="p">(</span><span class="n">instance</span><span class="p">):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">attr</span><span class="p">,</span> <span class="n">converter</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">converters</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>      <span class="c1"># sort by keys</span>
+            <span class="k">if</span> <span class="n">converter</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">converter</span> <span class="o">=</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">thing</span><span class="p">:</span> <span class="n">thing</span><span class="p">)</span>       <span class="c1"># noqa</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">converter</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">attr</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">decorate</span><span class="p">(</span><span class="n">klass</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">eq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">klass</span><span class="p">):</span>
+                <span class="k">return</span> <span class="bp">NotImplemented</span>
+            <span class="k">return</span> <span class="n">get_stuff</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="n">get_stuff</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">hash_</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="n">get_stuff</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+        <span class="n">klass</span><span class="o">.</span><span class="fm">__eq__</span> <span class="o">=</span> <span class="n">eq</span>
+        <span class="n">klass</span><span class="o">.</span><span class="fm">__hash__</span> <span class="o">=</span> <span class="n">hash_</span>
+        <span class="k">return</span> <span class="n">klass</span>
+
+    <span class="k">return</span> <span class="n">decorate</span></div>
+
+
+<div class="viewcode-block" id="mathify"><a class="viewcode-back" href="../../basicstuff.html#derivater.mathify">[docs]</a><span class="k">def</span> <span class="nf">mathify</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert a Python number into a MathObject.</span>
+
+<span class="sd">    If *obj* is already a MathObject, it&#39;s returned as is.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">MathObject</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">obj</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Integer</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;don&#39;t know how to mathify &quot;</span> <span class="o">+</span> <span class="nb">repr</span><span class="p">(</span><span class="n">obj</span><span class="p">))</span></div>
+
+
+<span class="c1"># MathObjects should be considered immutable</span>
+<span class="c1"># __eq__&#39;s are not mathy equality, they just check whether two math</span>
+<span class="c1"># objects are considered very similar, e.g. Symbol(&#39;x&#39;) == Symbol(&#39;x&#39;)</span>
+<span class="k">class</span> <span class="nc">MathObject</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Base class for all mathy objects.</span>
+
+<span class="sd">    Inherit from this class if you want to make an object that is compatible</span>
+<span class="sd">    with derivater.</span>
+
+<span class="sd">    .. seealso:: :func:`eq_and_hash`</span>
+
+<span class="sd">    .. method:: add_parenthesize</span>
+<span class="sd">                mul_parenthesize</span>
+<span class="sd">                pow_parenthesize</span>
+
+<span class="sd">        Pretty-printing objects is usually implemented with ``__repr__()``. For</span>
+<span class="sd">        example, :class:`.NaturalLog` does this::</span>
+
+<span class="sd">            def __init__(self, numerus):</span>
+<span class="sd">                self.numerus = mathify(numerus)</span>
+
+<span class="sd">            def __repr__(self):</span>
+<span class="sd">                return &#39;ln(%r)&#39; % self.numerus</span>
+
+<span class="sd">        However, sometimes parenthesized things are needed. If we have</span>
+<span class="sd">        ``(x + 1)**y`` it must not be displayed as ``x + 1**y``, but if we have</span>
+<span class="sd">        ``2**y`` it must not be displayed as ``(2)**y``. These methods let you</span>
+<span class="sd">        customize how the object is parenthesized. Click the above *[source]*</span>
+<span class="sd">        links to see what these methods do by default; usually it&#39;s enough to</span>
+<span class="sd">        implement just one of these methods e.g. like this::</span>
+
+<span class="sd">            def mul_parenthesize(self):</span>
+<span class="sd">                return &#39;(&#39; + repr(self) + &#39;)&#39;</span>
+
+<span class="sd">        Reprs of :class:`Add`, :class:`Mul` and :class:`Pow` call these methods</span>
+<span class="sd">        roughly like this:</span>
+
+<span class="sd">        * ``repr(x+y) == x.add_parenthesize() + &#39; + &#39; + y.add_parenthesize()``</span>
+<span class="sd">        * ``repr(x*y) == x.mul_parenthesize() + &#39;*&#39; + y.mul_parenthesize()``</span>
+<span class="sd">        * ``repr(x**y) == x.pow_parenthesize() + &#39;**&#39; + y.pow_parenthesize()``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="MathObject.apply_to_content"><a class="viewcode-back" href="../../basicstuff.html#derivater.MathObject.apply_to_content">[docs]</a>    <span class="k">def</span> <span class="nf">apply_to_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a new object with *func* applied to every object that this o\</span>
+<span class="sd">bject contains.</span>
+
+<span class="sd">        &gt;&gt;&gt; def two_times(obj):</span>
+<span class="sd">        ...     return 2*obj</span>
+<span class="sd">        ...</span>
+<span class="sd">        &gt;&gt;&gt; (x + y*z).apply_to_content(two_times)</span>
+<span class="sd">        2*x + 2*y*z</span>
+
+<span class="sd">        Override this if your object contains something. For example,</span>
+<span class="sd">        :class:`.NaturalLog` does something like this::</span>
+
+<span class="sd">            def __init__(self, numerus):</span>
+<span class="sd">                self.numerus = mathify(numerus)</span>
+
+<span class="sd">            def apply_to_content(self, func):</span>
+<span class="sd">                return ln(func(self.numerus))</span>
+
+<span class="sd">        By default, this returns *self* unchanged.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="MathObject.apply_recursively"><a class="viewcode-back" href="../../basicstuff.html#derivater.MathObject.apply_recursively">[docs]</a>    <span class="k">def</span> <span class="nf">apply_recursively</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;A recursive version of :func:`apply_to_content`.</span>
+
+<span class="sd">        &gt;&gt;&gt; class Lol(MathObject):</span>
+<span class="sd">        ...     def __init__(self, content):</span>
+<span class="sd">        ...         self.content = content</span>
+<span class="sd">        ...     def __repr__(self):</span>
+<span class="sd">        ...         return &#39;Lol(%r)&#39; % self.content</span>
+<span class="sd">        ...</span>
+<span class="sd">        &gt;&gt;&gt; (x + y*z).apply_recursively(Lol)</span>
+<span class="sd">        Lol(Lol(x) + Lol(Lol(y)*Lol(z)))</span>
+
+<span class="sd">        This function is implemented with :func:`apply_to_content`, so you</span>
+<span class="sd">        might want to override :func:`apply_to_content` instead if you think</span>
+<span class="sd">        you need to override this function.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">apply_to_content</span><span class="p">(</span><span class="k">lambda</span> <span class="n">obj</span><span class="p">:</span> <span class="n">obj</span><span class="o">.</span><span class="n">apply_recursively</span><span class="p">(</span><span class="n">func</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MathObject.get_content"><a class="viewcode-back" href="../../basicstuff.html#derivater.MathObject.get_content">[docs]</a>    <span class="k">def</span> <span class="nf">get_content</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a list of the content that :func:`apply_to_content` applies \</span>
+<span class="sd">to.</span>
+
+<span class="sd">        &gt;&gt;&gt; (x**y).get_content()</span>
+<span class="sd">        [x, y]</span>
+
+<span class="sd">        This is implemented with :func:`apply_to_content`, so usually you don&#39;t</span>
+<span class="sd">        need to override this. Just override :func:`apply_to_content` instead.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">def</span> <span class="nf">callback</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">obj</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">apply_to_content</span><span class="p">(</span><span class="n">callback</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+    <span class="k">def</span> <span class="nf">add_parenthesize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">mul_parenthesize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_parenthesize</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">pow_parenthesize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mul_parenthesize</span><span class="p">()</span>
+
+<div class="viewcode-block" id="MathObject.may_depend_on"><a class="viewcode-back" href="../../basicstuff.html#derivater.MathObject.may_depend_on">[docs]</a>    <span class="k">def</span> <span class="nf">may_depend_on</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">var</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check if this variable depends on the value of *var*.</span>
+
+<span class="sd">        The *var* must be a :class:`Symbol`.</span>
+
+<span class="sd">        By default, this checks if the content depends on anything using</span>
+<span class="sd">        :meth:`apply_to_content`, and returns False if there is no content. If</span>
+<span class="sd">        you think you need to override this, you may want to override</span>
+<span class="sd">        :meth:`apply_to_content` instead.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_content</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">obj</span><span class="o">.</span><span class="n">may_depend_on</span><span class="p">(</span><span class="n">var</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="MathObject.replace"><a class="viewcode-back" href="../../basicstuff.html#derivater.MathObject.replace">[docs]</a>    <span class="k">def</span> <span class="nf">replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Replace parts of the math object with another.</span>
+
+<span class="sd">        &gt;&gt;&gt; ln(2*x).replace(2*x, 3)</span>
+<span class="sd">        ln(3)</span>
+<span class="sd">        &gt;&gt;&gt; x.replace(x, y)</span>
+<span class="sd">        y</span>
+<span class="sd">        &gt;&gt;&gt; ln(2).replace(x, y)    # nothing happens</span>
+<span class="sd">        ln(2)</span>
+
+<span class="sd">        If you think you want to override this, you may want to override</span>
+<span class="sd">        :meth:`apply_to_content` instead; this method is implemented with</span>
+<span class="sd">        :meth:`apply_recursively`, and that uses :meth:`apply_to_content`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">old</span> <span class="o">=</span> <span class="n">mathify</span><span class="p">(</span><span class="n">old</span><span class="p">)</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="n">mathify</span><span class="p">(</span><span class="n">new</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">replacer</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">obj</span> <span class="o">==</span> <span class="n">old</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">new</span>
+            <span class="k">return</span> <span class="n">obj</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">apply_recursively</span><span class="p">(</span><span class="n">replacer</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MathObject.derivative"><a class="viewcode-back" href="../../basicstuff.html#derivater.MathObject.derivative">[docs]</a>    <span class="k">def</span> <span class="nf">derivative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wrt</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the derivative with respect to *wrt*.</span>
+
+<span class="sd">        &gt;&gt;&gt; sin(x).derivative(x)</span>
+<span class="sd">        cos(x)</span>
+<span class="sd">        &gt;&gt;&gt; sin(y).derivative(x)      # Symbols are independent</span>
+<span class="sd">        0</span>
+<span class="sd">        &gt;&gt;&gt; sin(f(x)).derivative(x)   # but SymbolFunctions work better</span>
+<span class="sd">        cos(f(x))*f&#39;(x)</span>
+
+<span class="sd">        The *wrt* must be a :class:`Symbol`.</span>
+
+<span class="sd">        If you override this, remember the chain rule! For example,</span>
+<span class="sd">        :class:`NaturalLog` does something like this...</span>
+<span class="sd">        ::</span>
+
+<span class="sd">            def __init__(self, numerus):</span>
+<span class="sd">                self.numerus = mathify(numerus)</span>
+
+<span class="sd">            def derivative(self, wrt):</span>
+<span class="sd">                return 1/self.numerus * self.numerus.derivative(wrt)</span>
+
+<span class="sd">        ...so we get this:</span>
+
+<span class="sd">        &gt;&gt;&gt; ln(x).derivative(x)     # 1/x * x.derivative(x)</span>
+<span class="sd">        1 / x</span>
+<span class="sd">        &gt;&gt;&gt; ln(f(x)).derivative(x)  # 1/f(x) * f(x).derivative(x)</span>
+<span class="sd">        f&#39;(x) / f(x)</span>
+<span class="sd">        &gt;&gt;&gt; ln(2).derivative(x)     # 1/mathify(2) * mathify(2).derivative(x)</span>
+<span class="sd">        0</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">may_depend_on</span><span class="p">(</span><span class="n">wrt</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;cannot take derivative of </span><span class="si">%r</span><span class="s2"> with respect to </span><span class="si">%r</span><span class="s2">&quot;</span>
+                        <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wrt</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="MathObject.gentle_simplify"><a class="viewcode-back" href="../../basicstuff.html#derivater.MathObject.gentle_simplify">[docs]</a>    <span class="k">def</span> <span class="nf">gentle_simplify</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Try to make the object look simpler.</span>
+
+<span class="sd">        Usually there&#39;s a simple, structury class with a Capitalized name, and</span>
+<span class="sd">        a convenient constructor function with a lowercase name (often shorter)</span>
+<span class="sd">        that creates an instance of the class and calls ``gentle_simplify()``.</span>
+<span class="sd">        Like this::</span>
+
+<span class="sd">            class NaturalLog:</span>
+<span class="sd">                ...</span>
+
+<span class="sd">            def ln(x):</span>
+<span class="sd">                return NaturalLog(x).gentle_simplify()</span>
+
+<span class="sd">        This way you can conveniently take a logarithm with :func:`ln`, but if</span>
+<span class="sd">        you don&#39;t want to automagically convert things like ``ln(1)`` into</span>
+<span class="sd">        ``0``, you can use :class:`NaturalLog` directly.</span>
+
+<span class="sd">        &gt;&gt;&gt; ln(1)           # returns mathify(0)</span>
+<span class="sd">        0</span>
+<span class="sd">        &gt;&gt;&gt; NaturalLog(1)   # returns a NaturalLog object</span>
+<span class="sd">        ln(1)</span>
+<span class="sd">        &gt;&gt;&gt; NaturalLog(1).gentle_simplify()</span>
+<span class="sd">        0</span>
+
+<span class="sd">        Using the ``+``, ``-``, ``*``, ``/`` and ``**`` operators with</span>
+<span class="sd">        MathObjects calls ``gentle_simplify()`` automagically. See</span>
+<span class="sd">        :ref:`this thing &lt;addmulpow&gt;` if you want to avoid that.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">apply_to_content</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">methodcaller</span><span class="p">(</span><span class="s1">&#39;gentle_simplify&#39;</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="MathObject.simplify"><a class="viewcode-back" href="../../basicstuff.html#derivater.MathObject.simplify">[docs]</a>    <span class="k">def</span> <span class="nf">simplify</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Make the object look as simple as possible.</span>
+
+<span class="sd">        This is like :meth:`gentle_simplify`, but more aggressive and usually</span>
+<span class="sd">        not called automatically.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">apply_to_content</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">methodcaller</span><span class="p">(</span><span class="s1">&#39;simplify&#39;</span><span class="p">))</span></div>
+
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>   <span class="c1"># self + other</span>
+        <span class="k">return</span> <span class="n">Add</span><span class="p">([</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">])</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()</span>
+
+    <span class="fm">__radd__</span> <span class="o">=</span> <span class="fm">__add__</span>          <span class="c1"># other + self</span>
+
+    <span class="k">def</span> <span class="nf">__neg__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>          <span class="c1"># -self</span>
+        <span class="k">return</span> <span class="n">Mul</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="p">])</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__sub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>   <span class="c1"># self - other</span>
+        <span class="k">return</span> <span class="bp">self</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="n">other</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__rsub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>  <span class="c1"># other - self</span>
+        <span class="k">return</span> <span class="n">other</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__mul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>   <span class="c1"># self * other</span>
+        <span class="k">return</span> <span class="n">Mul</span><span class="p">([</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">])</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()</span>
+
+    <span class="fm">__rmul__</span> <span class="o">=</span> <span class="fm">__mul__</span>          <span class="c1"># other * self</span>
+
+    <span class="k">def</span> <span class="nf">__truediv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>   <span class="c1"># self / other</span>
+        <span class="c1"># it&#39;s important to mathify the -1 because 2**(-1) == 0.5, but</span>
+        <span class="c1"># we don&#39;t want floats</span>
+        <span class="k">return</span> <span class="bp">self</span> <span class="o">*</span> <span class="n">other</span><span class="o">**</span><span class="p">(</span><span class="n">mathify</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__rtruediv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>  <span class="c1"># other / self</span>
+        <span class="c1"># -1 will be mathified automatically by __pow__</span>
+        <span class="k">return</span> <span class="n">other</span> <span class="o">*</span> <span class="bp">self</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__pow__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>   <span class="c1"># self ** other</span>
+        <span class="k">return</span> <span class="n">Pow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__rpow__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>  <span class="c1"># other ** self</span>
+        <span class="k">return</span> <span class="n">Pow</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="Symbol"><a class="viewcode-back" href="../../basicstuff.html#derivater.Symbol">[docs]</a><span class="nd">@eq_and_hash</span><span class="p">({</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+<span class="k">class</span> <span class="nc">Symbol</span><span class="p">(</span><span class="n">MathObject</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A symbol like ``x`` or ``y``.</span>
+
+<span class="sd">    &gt;&gt;&gt; x = Symbol(&#39;x&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; x</span>
+<span class="sd">    x</span>
+<span class="sd">    &gt;&gt;&gt; 1 + x*x</span>
+<span class="sd">    x**2 + 1</span>
+
+<span class="sd">    You can use Symbols freely with all derivater functions, but Python&#39;s</span>
+<span class="sd">    built-in functions don&#39;t usually like them:</span>
+
+<span class="sd">    &gt;&gt;&gt; sin(x)</span>
+<span class="sd">    sin(x)</span>
+<span class="sd">    &gt;&gt;&gt; import math</span>
+<span class="sd">    &gt;&gt;&gt; math.sin(x)</span>
+<span class="sd">    Traceback (most recent call last):</span>
+<span class="sd">      ...</span>
+<span class="sd">    TypeError: must be real number, not Symbol</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">may_depend_on</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other_symbol</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span> <span class="o">==</span> <span class="n">other_symbol</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">derivative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wrt</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">wrt</span> <span class="o">==</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SymbolFunction"><a class="viewcode-back" href="../../basicstuff.html#derivater.SymbolFunction">[docs]</a><span class="nd">@eq_and_hash</span><span class="p">({</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;arg&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;derivative_count&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+<span class="k">class</span> <span class="nc">SymbolFunction</span><span class="p">(</span><span class="n">MathObject</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Represents an unknown, single-variable function.</span>
+
+<span class="sd">    &gt;&gt;&gt; from derivater import SymbolFunction, Symbol</span>
+<span class="sd">    &gt;&gt;&gt; x = Symbol(&#39;x&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; SymbolFunction(&#39;f&#39;, x)</span>
+<span class="sd">    f(x)</span>
+<span class="sd">    &gt;&gt;&gt; SymbolFunction(&#39;g&#39;, x, derivative_count=2)</span>
+<span class="sd">    g&#39;&#39;(x)</span>
+
+<span class="sd">    By default, ``derivater.__main__`` contains functions defined like this::</span>
+
+<span class="sd">        from functools import partial</span>
+<span class="sd">        f = partial(SymbolFunction, &#39;f&#39;)</span>
+<span class="sd">        g = partial(SymbolFunction, &#39;g&#39;)</span>
+
+<span class="sd">    This means that you can type ``f(x)`` to get ``f(x)``.</span>
+
+<span class="sd">    &gt;&gt;&gt; f(x)</span>
+<span class="sd">    f(x)</span>
+
+<span class="sd">    There are also ``f_`` and ``g_`` defined like this...</span>
+<span class="sd">    ::</span>
+
+<span class="sd">        f_ = partial(f, derivative_count=1)</span>
+<span class="sd">        g_ = partial(g, derivative_count=1)</span>
+
+<span class="sd">    ...so you can do this:</span>
+
+<span class="sd">    &gt;&gt;&gt; f_(x)</span>
+<span class="sd">    f&#39;(x)</span>
+
+<span class="sd">    More derivative examples:</span>
+
+<span class="sd">    &gt;&gt;&gt; f(x).derivative(x).derivative(x)</span>
+<span class="sd">    f&#39;&#39;(x)</span>
+<span class="sd">    &gt;&gt;&gt; f(x).derivative(x).derivative(x).derivative_count</span>
+<span class="sd">    2</span>
+<span class="sd">    &gt;&gt;&gt; (f(x) * g(x)).derivative(x)</span>
+<span class="sd">    f&#39;(x)*g(x) + f(x)*g&#39;(x)</span>
+<span class="sd">    &gt;&gt;&gt; f(g(x)).derivative(x)</span>
+<span class="sd">    f&#39;(g(x))*g&#39;(x)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">arg</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">derivative_count</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arg</span> <span class="o">=</span> <span class="n">mathify</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">derivative_count</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;negative derivative_count is not supported&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">derivative_count</span> <span class="o">=</span> <span class="n">derivative_count</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="si">%s%s</span><span class="s1">(</span><span class="si">%r</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;&#39;&quot;</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">derivative_count</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">arg</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">apply_to_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">SymbolFunction</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">arg</span><span class="p">),</span>
+                              <span class="n">derivative_count</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">derivative_count</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">derivative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wrt</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">SymbolFunction</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">arg</span><span class="p">,</span>
+                               <span class="n">derivative_count</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">derivative_count</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+                <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">arg</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">wrt</span><span class="p">))</span></div>
+
+
+<span class="c1"># low-level integer</span>
+<div class="viewcode-block" id="Integer"><a class="viewcode-back" href="../../custom.html#derivater.Integer">[docs]</a><span class="nd">@eq_and_hash</span><span class="p">({</span><span class="s1">&#39;python_int&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+<span class="k">class</span> <span class="nc">Integer</span><span class="p">(</span><span class="n">MathObject</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An integer with a known value.</span>
+
+<span class="sd">    You can create Integer objects yourself or, equivalently, you can pass a</span>
+<span class="sd">    Python int to :func:`mathify`.</span>
+
+<span class="sd">    .. attribute:: python_int</span>
+
+<span class="sd">        The equivalent python ``int`` object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">python_int</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">python_int</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">python_int</span> <span class="o">=</span> <span class="n">python_int</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">python_int</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">may_depend_on</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">var</span><span class="p">):</span>   <span class="c1"># enough for derivative() to work</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">add_parenthesize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">python_int</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span>
+        <span class="k">return</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_looks_like_negative</span><span class="p">(</span><span class="n">expr</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">Mul</span><span class="p">):</span>
+        <span class="c1"># len(expr.objects) &gt;= 1 would be more readable in this context, but</span>
+        <span class="c1"># pep8 **IS** a lawbook.... so..</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">expr</span><span class="o">.</span><span class="n">objects</span> <span class="ow">and</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">expr</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Integer</span><span class="p">)</span> <span class="ow">and</span>
+                <span class="n">expr</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">python_int</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">Integer</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">expr</span><span class="o">.</span><span class="n">python_int</span> <span class="o">&lt;</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="Add"><a class="viewcode-back" href="../../custom.html#derivater.Add">[docs]</a><span class="nd">@eq_and_hash</span><span class="p">({</span><span class="s1">&#39;objects&#39;</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">})</span>
+<span class="k">class</span> <span class="nc">Add</span><span class="p">(</span><span class="n">MathObject</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An object that represents a bunch of things added together.</span>
+
+<span class="sd">    .. attribute:: objects</span>
+
+<span class="sd">        List of the added objects.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">objects</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">objects</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">mathify</span><span class="p">,</span> <span class="n">objects</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">add_parenthesize</span><span class="p">()]</span>
+
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="k">if</span> <span class="n">_looks_like_negative</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39; - &#39;</span><span class="p">)</span>
+                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="o">-</span><span class="n">obj</span><span class="p">)</span><span class="o">.</span><span class="n">add_parenthesize</span><span class="p">())</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39; + &#39;</span><span class="p">)</span>
+                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">add_parenthesize</span><span class="p">())</span>
+        <span class="k">return</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+    <span class="c1"># TODO: how about something like (a+b+c+x).replace(b+c, y)?</span>
+    <span class="k">def</span> <span class="nf">apply_to_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Add</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">mul_parenthesize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span>
+
+    <span class="k">def</span> <span class="nf">derivative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wrt</span><span class="p">):</span>
+        <span class="c1"># d/dx (f(x) + g(x)) = f&#39;(x) + g&#39;(x)</span>
+        <span class="c1"># also works with more than 2 functions</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">Add</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">wrt</span><span class="p">)</span> <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">gentle_simplify</span><span class="p">())</span>
+
+<div class="viewcode-block" id="Add.gentle_simplify"><a class="viewcode-back" href="../../custom.html#derivater.Add.gentle_simplify">[docs]</a>    <span class="k">def</span> <span class="nf">gentle_simplify</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This override of :meth:`.MathObject.gentle_simplify` does these thi\</span>
+<span class="sd">ngs:</span>
+
+<span class="sd">        * All the added :attr:`objects` are simplified gently.</span>
+<span class="sd">        * Nested Adds are combined into one; ``Add([a, Add([b, c])])`` becomes</span>
+<span class="sd">          ``Add([a, b, c])``.</span>
+<span class="sd">        * Integers are combined into one integer, and that&#39;s always the last</span>
+<span class="sd">          item in :attr:`objects`.</span>
+<span class="sd">        * Repeatedly added objects are turned into :class:`Muls &lt;Mul&gt;`;</span>
+<span class="sd">          ``Add([a, a, b])`` becomes ``Add([2*a, b])``.</span>
+<span class="sd">        * Integer coefficients are combined: ``Add([2*a, 3*b, 4*a])`` becomes</span>
+<span class="sd">          ``Add([6*a, 3*b])``.</span>
+<span class="sd">        * If there&#39;s exactly 1 object left, it is returned instead of an Add</span>
+<span class="sd">          object.</span>
+<span class="sd">        * If there are no objects left, ``mathify(0)`` is returned instead of</span>
+<span class="sd">          an Add object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">flat</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="nb">map</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">methodcaller</span><span class="p">(</span><span class="s1">&#39;gentle_simplify&#39;</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Add</span><span class="p">):</span>
+                <span class="n">flat</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">objects</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">flat</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">flat</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">obj</span> <span class="o">==</span> <span class="n">obj</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">(),</span> <span class="n">obj</span>
+
+        <span class="c1"># extract integers</span>
+        <span class="n">int_value</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">no_ints</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">flat</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Integer</span><span class="p">):</span>
+                <span class="n">int_value</span> <span class="o">+=</span> <span class="n">obj</span><span class="o">.</span><span class="n">python_int</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">no_ints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+
+        <span class="c1"># turn repeated objects into _Muls</span>
+        <span class="k">while</span> <span class="nb">max</span><span class="p">(</span><span class="n">collections</span><span class="o">.</span><span class="n">Counter</span><span class="p">(</span><span class="n">no_ints</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span> <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">no_ints</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">(</span><span class="n">value</span> <span class="o">*</span> <span class="n">coeff</span><span class="p">)</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">value</span><span class="p">,</span> <span class="n">coeff</span> <span class="ow">in</span> <span class="n">collections</span><span class="o">.</span><span class="n">Counter</span><span class="p">(</span><span class="n">no_ints</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+
+        <span class="c1"># combine integer coefficients: 2*x + 3*x becomes 5*x</span>
+        <span class="n">counts</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>       <span class="c1"># {the_obj: coeff}</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">no_ints</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Mul</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Integer</span><span class="p">):</span>
+                <span class="n">counts</span><span class="p">[</span><span class="n">Mul</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()]</span> <span class="o">+=</span> <span class="p">(</span>
+                    <span class="n">obj</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">python_int</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">counts</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># should be simple enough by now :D</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">coeff</span> <span class="o">*</span> <span class="n">obj</span> <span class="k">for</span> <span class="n">obj</span><span class="p">,</span> <span class="n">coeff</span> <span class="ow">in</span> <span class="n">counts</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+        <span class="k">while</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">int_value</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Integer</span><span class="p">(</span><span class="n">int_value</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">parts</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">Add</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span></div>
+
+    <span class="c1"># TODO</span>
+    <span class="k">def</span> <span class="nf">simplify</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Add</span><span class="p">(</span><span class="n">part</span><span class="o">.</span><span class="n">simplify</span><span class="p">()</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="p">)</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Mul"><a class="viewcode-back" href="../../custom.html#derivater.Mul">[docs]</a><span class="nd">@eq_and_hash</span><span class="p">({</span><span class="s1">&#39;objects&#39;</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">})</span>
+<span class="k">class</span> <span class="nc">Mul</span><span class="p">(</span><span class="n">MathObject</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An object that represents a bunch of stuff multiplied with each other.</span>
+
+<span class="sd">    .. attribute:: objects</span>
+
+<span class="sd">        List of the multiplied objects.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">objects</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">objects</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">mathify</span><span class="p">,</span> <span class="n">objects</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">_looks_like_negative</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s1">&#39;-&#39;</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">mul_parenthesize</span><span class="p">()</span>
+
+        <span class="c1"># a/b is represented as a*b**(-1)</span>
+        <span class="n">top</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">bottom</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Pow</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_looks_like_negative</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">exponent</span><span class="p">):</span>
+                <span class="c1"># 1/obj is the same thing with inverted exponent</span>
+                <span class="n">bottom</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="n">obj</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">top</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">bottom</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;*&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">mul_parenthesize</span><span class="p">()</span> <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">top</span><span class="p">)</span> <span class="ow">or</span> <span class="s1">&#39;1&#39;</span>
+
+        <span class="c1"># the top uses mul_parenthesize() instead of repr() because otherwise</span>
+        <span class="c1"># repr((x + y)/z) == &#39;x + y / z&#39;</span>
+        <span class="n">top_string</span> <span class="o">=</span> <span class="nb">repr</span><span class="p">(</span><span class="n">Mul</span><span class="p">(</span><span class="n">top</span><span class="p">))</span>
+        <span class="n">bottom_string</span> <span class="o">=</span> <span class="p">(</span><span class="n">bottom</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">mul_parenthesize</span><span class="p">()</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bottom</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+                         <span class="k">else</span> <span class="n">Mul</span><span class="p">(</span><span class="n">bottom</span><span class="p">)</span><span class="o">.</span><span class="n">pow_parenthesize</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">top_string</span> <span class="o">+</span> <span class="s1">&#39; / &#39;</span> <span class="o">+</span> <span class="n">bottom_string</span>
+
+    <span class="k">def</span> <span class="nf">apply_to_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Mul</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">pow_parenthesize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span>
+
+    <span class="k">def</span> <span class="nf">derivative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wrt</span><span class="p">):</span>
+        <span class="c1"># d/dx (f(x)g(x)h(x)) = f&#39;(x)g(x)h(x) + f(x)g&#39;(x)h(x) + f(x)g(x)h&#39;(x)</span>
+        <span class="c1"># it works like this for more functions, derivative of each</span>
+        <span class="c1"># function multiplied by all other functions</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="p">)):</span>      <span class="c1"># OMG ITS RANGELEN KITTENS DIE</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Mul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="p">[:</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span>
+                             <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">wrt</span><span class="p">)]</span> <span class="o">+</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">:]))</span>
+        <span class="k">return</span> <span class="n">Add</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Mul.gentle_simplify"><a class="viewcode-back" href="../../custom.html#derivater.Mul.gentle_simplify">[docs]</a>    <span class="k">def</span> <span class="nf">gentle_simplify</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This override of :meth:`.MathObject.gentle_simplify` does these thi\</span>
+<span class="sd">ngs:</span>
+
+<span class="sd">        * All the multiplied :attr:`objects` are simplified gently.</span>
+<span class="sd">        * Nested Muls are combined into one; ``Mul([a, Mul([b, c])])`` becomes</span>
+<span class="sd">          ``Mul([a, b, c])``.</span>
+<span class="sd">        * Integers are combined into one integer, and that&#39;s always the first</span>
+<span class="sd">          item in :attr:`objects`. (Note that :class:`Add.gentle_simplify` does</span>
+<span class="sd">          the same thing, but it puts the integer last; this means that</span>
+<span class="sd">          ``3 + x*2`` turns into ``2*x + 3``.)</span>
+<span class="sd">        * Repeatedly added objects are turned into :class:`Pows &lt;Pow&gt;`;</span>
+<span class="sd">          ``Mul([a, a, b])`` becomes ``Mul([a**2, b])``.</span>
+<span class="sd">        * Powers with same base are combined: ``Mul([x**a, y, x**b])`` becomes</span>
+<span class="sd">          ``Mul([x**(a + b), y])``.</span>
+<span class="sd">        * If there&#39;s exactly 1 object left, it is returned instead of a Mul</span>
+<span class="sd">          object.</span>
+<span class="sd">        * If there are no objects left, ``mathify(1)`` is returned instead of</span>
+<span class="sd">          a Mul object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">flat</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="nb">map</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">methodcaller</span><span class="p">(</span><span class="s1">&#39;gentle_simplify&#39;</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Mul</span><span class="p">):</span>
+                <span class="n">flat</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">objects</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">obj</span> <span class="o">==</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">flat</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">flat</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">obj</span> <span class="o">==</span> <span class="n">obj</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">(),</span> <span class="p">(</span>
+                <span class="s2">&quot;</span><span class="si">%r</span><span class="s2"> didn&#39;t simplify gently&quot;</span> <span class="o">%</span> <span class="n">obj</span><span class="p">)</span>
+
+        <span class="c1"># extract integers</span>
+        <span class="n">int_value</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">no_ints</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">flat</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Integer</span><span class="p">):</span>
+                <span class="n">int_value</span> <span class="o">*=</span> <span class="n">obj</span><span class="o">.</span><span class="n">python_int</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">no_ints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+
+        <span class="c1"># turn repeated objects into Pows</span>
+        <span class="k">while</span> <span class="nb">max</span><span class="p">(</span><span class="n">collections</span><span class="o">.</span><span class="n">Counter</span><span class="p">(</span><span class="n">no_ints</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span> <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">no_ints</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">base</span> <span class="o">**</span> <span class="n">exponent</span>
+                <span class="k">for</span> <span class="n">base</span><span class="p">,</span> <span class="n">exponent</span> <span class="ow">in</span> <span class="n">collections</span><span class="o">.</span><span class="n">Counter</span><span class="p">(</span><span class="n">no_ints</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+
+        <span class="c1"># combine powers with same bases</span>
+        <span class="n">powers</span> <span class="o">=</span> <span class="p">{}</span>     <span class="c1"># {base: exponent}</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">no_ints</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Pow</span><span class="p">):</span>
+                <span class="n">base</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">base</span>
+                <span class="n">exponent</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">exponent</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">base</span> <span class="o">=</span> <span class="n">obj</span>
+                <span class="n">exponent</span> <span class="o">=</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">powers</span><span class="p">[</span><span class="n">base</span><span class="p">]</span> <span class="o">=</span> <span class="n">powers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="o">+</span> <span class="n">exponent</span>
+
+        <span class="c1"># should be simple enough</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">base</span> <span class="o">**</span> <span class="n">exponent</span> <span class="k">for</span> <span class="n">base</span><span class="p">,</span> <span class="n">exponent</span> <span class="ow">in</span> <span class="n">powers</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+        <span class="k">while</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">mathify</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">int_value</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">mathify</span><span class="p">(</span><span class="n">int_value</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">parts</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">Mul</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span></div>
+
+    <span class="c1"># TODO</span>
+    <span class="k">def</span> <span class="nf">simplify</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Mul</span><span class="p">(</span><span class="n">part</span><span class="o">.</span><span class="n">simplify</span><span class="p">()</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">objects</span><span class="p">)</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Pow"><a class="viewcode-back" href="../../custom.html#derivater.Pow">[docs]</a><span class="nd">@eq_and_hash</span><span class="p">({</span><span class="s1">&#39;base&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;exponent&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+<span class="k">class</span> <span class="nc">Pow</span><span class="p">(</span><span class="n">MathObject</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An object that represents ``base ** exponent``.</span>
+
+<span class="sd">    .. attribute:: base</span>
+<span class="sd">                   exponent</span>
+
+<span class="sd">        Pow objects represent ``base**exponent``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">exponent</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">=</span> <span class="n">mathify</span><span class="p">(</span><span class="n">base</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exponent</span> <span class="o">=</span> <span class="n">mathify</span><span class="p">(</span><span class="n">exponent</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">exponent</span> <span class="o">==</span> <span class="n">mathify</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s1">&#39;1 / &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">pow_parenthesize</span><span class="p">()</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">pow_parenthesize</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39;**&#39;</span> <span class="o">+</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">exponent</span><span class="o">.</span><span class="n">pow_parenthesize</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">pow_parenthesize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># x**y**z = x**(y**z)</span>
+        <span class="c1"># that&#39;s why (x**y)**z must be shown with parentheses around x**y</span>
+        <span class="k">return</span> <span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span>
+
+    <span class="k">def</span> <span class="nf">apply_to_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Pow</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">),</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">exponent</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">derivative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wrt</span><span class="p">):</span>
+        <span class="c1"># _explog.py wants lots of stuff from this file</span>
+        <span class="c1"># this file wants exp and ln from _explog.py</span>
+        <span class="kn">from</span> <span class="nn">derivater._explog</span> <span class="k">import</span> <span class="n">exp</span><span class="p">,</span> <span class="n">ln</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">may_depend_on</span><span class="p">(</span><span class="n">wrt</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">may_depend_on</span><span class="p">(</span><span class="n">wrt</span><span class="p">):</span>
+            <span class="c1"># d/dx a**f(x) = a**f(x) ln(a) * f&#39;(x)</span>
+            <span class="k">return</span> <span class="bp">self</span> <span class="o">*</span> <span class="n">ln</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">exponent</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">wrt</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">exponent</span><span class="o">.</span><span class="n">may_depend_on</span><span class="p">(</span><span class="n">wrt</span><span class="p">):</span>
+            <span class="c1"># d/dx f(x)**c = c*f(x)**(c-1) * f&#39;(x)</span>
+            <span class="c1"># must be handled specially because this is defined if self.base</span>
+            <span class="c1"># is negative and self.exponent is an integer, but the stuff below</span>
+            <span class="c1"># needs ln(self.base)</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">exponent</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">**</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">exponent</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">wrt</span><span class="p">))</span>
+
+        <span class="c1">#                  /     g(x) \</span>
+        <span class="c1">#     g(x)       ln| f(x)     |      g(x)*ln(f(x))</span>
+        <span class="c1"># f(x)      =  e   \          /  =  e</span>
+        <span class="c1">#</span>
+        <span class="c1"># rest of the code can take the derivative of that</span>
+        <span class="n">rewrite</span> <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">exponent</span> <span class="o">*</span> <span class="n">ln</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">))</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">rewrite</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">wrt</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">rewrite</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>    <span class="c1"># a bit simpler</span>
+
+<div class="viewcode-block" id="Pow.gentle_simplify"><a class="viewcode-back" href="../../custom.html#derivater.Pow.gentle_simplify">[docs]</a>    <span class="k">def</span> <span class="nf">gentle_simplify</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This override of :meth:`.MathObject.gentle_simplify` does these thi\</span>
+<span class="sd">ngs:</span>
+
+<span class="sd">        * The base and exponent are simplified gently.</span>
+<span class="sd">        * If the base is also a power, the powers are combined into one;</span>
+<span class="sd">          ``Pow(Pow(a, b), c)`` becomes ``Pow(a, b*c)``.</span>
+<span class="sd">        * If the base is a :class:`Mul`, the power is separated into two</span>
+<span class="sd">          powers; ``Pow(a*b, c)`` becomes ``Pow(a, c) * Pow(b, c)``.</span>
+<span class="sd">        * If the base and the exponent are 0, this does the same wrongness as</span>
+<span class="sd">          Python. Try ``0**0`` in a Python interpreter to find out what it is</span>
+<span class="sd">          and don&#39;t blame me for returning a finite value for an indeterminate</span>
+<span class="sd">          form; blame Python devs instead.</span>
+<span class="sd">        * If the base is 0, ``mathify(0)`` is returned.</span>
+<span class="sd">        * If the base is 1, ``mathify(1)`` is returned.</span>
+<span class="sd">        * If the exponent is 0, ``mathify(1)`` is returned.</span>
+<span class="sd">        * If the exponent is 1, the base is returned.</span>
+<span class="sd">        * If the base and exponent are integers such that the whole thing is</span>
+<span class="sd">          known to be an integer, ``mathify(that integer)`` is returned.</span>
+<span class="sd">          Currently this does not detect all possible ways to create an</span>
+<span class="sd">          integer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()</span>
+        <span class="n">exponent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">exponent</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">Pow</span><span class="p">):</span>
+            <span class="c1"># (x**y)**z = x**(y * z)</span>
+            <span class="k">return</span> <span class="n">base</span><span class="o">.</span><span class="n">base</span> <span class="o">**</span> <span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">exponent</span> <span class="o">*</span> <span class="n">exponent</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">Mul</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">Mul</span><span class="p">(</span><span class="n">obj</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">exponent</span> <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">objects</span><span class="p">)</span>
+                    <span class="o">.</span><span class="n">gentle_simplify</span><span class="p">())</span>
+
+        <span class="c1"># TODO: buts, e.g. 0**x == 0  but x != 0 ???</span>
+        <span class="k">if</span> <span class="n">base</span> <span class="o">==</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="n">exponent</span> <span class="o">==</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="p">):</span>
+            <span class="c1"># python does this wrong, so let&#39;s blame it for the result...</span>
+            <span class="k">return</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="o">**</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">base</span> <span class="o">==</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">base</span> <span class="o">==</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">exponent</span> <span class="o">==</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">exponent</span> <span class="o">==</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">base</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">Integer</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">exponent</span><span class="p">,</span> <span class="n">Integer</span><span class="p">)</span> <span class="ow">and</span>
+                <span class="p">(</span><span class="n">exponent</span><span class="o">.</span><span class="n">python_int</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">base</span> <span class="o">==</span> <span class="n">mathify</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))):</span>
+            <span class="c1"># this must be an integer</span>
+            <span class="c1"># TODO: handle more cases</span>
+            <span class="k">return</span> <span class="n">mathify</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">python_int</span> <span class="o">**</span> <span class="n">exponent</span><span class="o">.</span><span class="n">python_int</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">Pow</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">exponent</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">simplify</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">simplify</span><span class="p">()</span> <span class="o">**</span> <span class="bp">self</span><span class="o">.</span><span class="n">exponent</span><span class="o">.</span><span class="n">simplify</span><span class="p">()</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Akuli.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

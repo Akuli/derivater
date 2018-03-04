@@ -1,0 +1,166 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Exponents and Logarithms &#8212; Derivater 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Trig Functions" href="trig.html" />
+    <link rel="prev" title="Constants" href="constants.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="exponents-and-logarithms">
+<h1>Exponents and Logarithms<a class="headerlink" href="#exponents-and-logarithms" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="derivater.exp">
+<code class="descclassname">derivater.</code><code class="descname">exp</code><span class="sig-paren">(</span><em>exponent</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_explog.html#exp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.exp" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is equivalent to <code class="docutils literal"><span class="pre">e**exponent</span></code>.</p>
+<p>Unlike in Python’s <code class="docutils literal"><span class="pre">math</span></code> module, this function is no more precise than a
+plain <code class="docutils literal"><span class="pre">e**x</span></code>, and it’s there just for people who prefer to write
+<code class="docutils literal"><span class="pre">exp(x)</span></code> instead of <code class="docutils literal"><span class="pre">e**x</span></code>.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">e**x</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">e**x</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="derivater.ln">
+<code class="descclassname">derivater.</code><code class="descname">ln</code><span class="sig-paren">(</span><em>numerus</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_explog.html#ln"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.ln" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the natural logarithm (base <a class="reference internal" href="constants.html#derivater.e" title="derivater.e"><code class="xref py py-data docutils literal"><span class="pre">e</span></code></a>) of <em>numerus</em>.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ln</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+<span class="go">1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ln</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">1 / x</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">x**x*(ln(x) + 1)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="derivater.log">
+<code class="descclassname">derivater.</code><code class="descname">log</code><span class="sig-paren">(</span><em>numerus</em>, <em>base=e</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_explog.html#log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the logarithm of <em>numerus</em> with the given <em>base</em>.</p>
+<p>This is equivalent to <code class="docutils literal"><span class="pre">ln(numerus)</span> <span class="pre">/</span> <span class="pre">ln(base)</span></code>.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">log</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="go">ln(x) / ln(2)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">log</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">ln(x)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="derivater.log2">
+<code class="descclassname">derivater.</code><code class="descname">log2</code><span class="sig-paren">(</span><em>numerus</em><span class="sig-paren">)</span><a class="headerlink" href="#derivater.log2" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a convenience function that returns <code class="docutils literal"><span class="pre">log(numerus,</span> <span class="pre">2)</span></code>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="derivater.log10">
+<code class="descclassname">derivater.</code><code class="descname">log10</code><span class="sig-paren">(</span><em>numerus</em><span class="sig-paren">)</span><a class="headerlink" href="#derivater.log10" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a convenience function that returns <code class="docutils literal"><span class="pre">log(numerus,</span> <span class="pre">10)</span></code>.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="derivater.NaturalLog">
+<em class="property">class </em><code class="descclassname">derivater.</code><code class="descname">NaturalLog</code><span class="sig-paren">(</span><em>numerus</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_explog.html#NaturalLog"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.NaturalLog" title="Permalink to this definition">¶</a></dt>
+<dd><p>The type of many objects returned by <a class="reference internal" href="#derivater.ln" title="derivater.ln"><code class="xref py py-func docutils literal"><span class="pre">ln()</span></code></a>.</p>
+<p>Don’t create <code class="docutils literal"><span class="pre">NaturalLog</span></code> objects yourself; use <a class="reference internal" href="#derivater.ln" title="derivater.ln"><code class="xref py py-func docutils literal"><span class="pre">ln()</span></code></a> instead. It
+may return special values like 0 or 1 instead of <code class="docutils literal"><span class="pre">NaturalLog</span></code> objects.</p>
+<dl class="attribute">
+<dt id="derivater.NaturalLog.numerus">
+<code class="descname">numerus</code><a class="headerlink" href="#derivater.NaturalLog.numerus" title="Permalink to this definition">¶</a></dt>
+<dd><p>The object passed to <a class="reference internal" href="#derivater.ln" title="derivater.ln"><code class="xref py py-func docutils literal"><span class="pre">ln()</span></code></a>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="constants.html" title="previous chapter">Constants</a></li>
+      <li>Next: <a href="trig.html" title="next chapter">Trig Functions</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/explog.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Akuli.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/explog.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

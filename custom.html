@@ -1,0 +1,426 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Custom Math Objects and Stuff &#8212; Derivater 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Trig Functions" href="trig.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="custom-math-objects-and-stuff">
+<span id="custom"></span><h1>Custom Math Objects and Stuff<a class="headerlink" href="#custom-math-objects-and-stuff" title="Permalink to this headline">¶</a></h1>
+<p>If you just want to take derivatives of stuff you don’t need anything
+documented here, but this stuff lets you implement things like custom math
+objects that work with derivater.</p>
+<div class="section" id="custom-math-object-example">
+<span id="log2-class-example"></span><h2>Custom Math Object Example<a class="headerlink" href="#custom-math-object-example" title="Permalink to this headline">¶</a></h2>
+<p>Derivater doesn’t have a class for base 2 logarithms by default and <code class="docutils literal"><span class="pre">log2(x)</span></code>
+just returns <code class="docutils literal"><span class="pre">ln(x)</span> <span class="pre">/</span> <span class="pre">ln(2)</span></code>. Let’s implement an actual base 2 logarithm
+object to see how things go.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">derivater</span> <span class="k">import</span> <span class="n">MathObject</span><span class="p">,</span> <span class="n">Symbol</span><span class="p">,</span> <span class="n">mathify</span>
+
+
+<span class="k">class</span> <span class="nc">Base2Log</span><span class="p">(</span><span class="n">MathObject</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">numerus</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">numerus</span> <span class="o">=</span> <span class="n">mathify</span><span class="p">(</span><span class="n">numerus</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;log2(</span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numerus</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">gentle_simplify</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># some special values, kind of dumb but not too bad</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">numerus</span> <span class="o">==</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">numerus</span> <span class="o">==</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">simplify</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># a better simplify() method would check for do</span>
+        <span class="c1"># things like log2(2**x).simplify() == x</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">log2</span><span class="p">(</span><span class="n">numerus</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Base2Log</span><span class="p">(</span><span class="n">numerus</span><span class="p">)</span><span class="o">.</span><span class="n">gentle_simplify</span><span class="p">()</span>
+
+
+<span class="c1"># minimal tests :D</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">log2</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>      <span class="c1"># 0</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">Base2Log</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>  <span class="c1"># log2(1)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">log2</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>      <span class="c1"># 1</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">Base2Log</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>  <span class="c1"># log2(2)</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">Symbol</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">log2</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>      <span class="c1"># log2(x)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">Base2Log</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>  <span class="c1"># log2(x)</span>
+
+<span class="c1"># these are WRONG!!</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">log2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">may_depend_on</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>     <span class="c1"># False</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">log2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>        <span class="c1"># 0</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">log2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="n">log2</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>           <span class="c1"># False</span>
+</pre></div>
+</div>
+<p>If you are wondering why we need a class and a factory function, check out
+<a class="reference internal" href="basicstuff.html#derivater.MathObject.gentle_simplify" title="derivater.MathObject.gentle_simplify"><code class="xref py py-func docutils literal"><span class="pre">gentle_simplify()</span></code></a> documentation (just click the link).</p>
+<p>Many things work quite nicely, but something weird is going on with the last
+few things. By default, derivater assumes that MathObjects don’t depend on
+anything. The docs of <a class="reference internal" href="basicstuff.html#derivater.MathObject.may_depend_on" title="derivater.MathObject.may_depend_on"><code class="xref py py-meth docutils literal"><span class="pre">may_depend_on()</span></code></a> say that it’s best to
+override <a class="reference internal" href="basicstuff.html#derivater.MathObject.apply_to_content" title="derivater.MathObject.apply_to_content"><code class="xref py py-meth docutils literal"><span class="pre">apply_to_content()</span></code></a> instead of overriding
+<a class="reference internal" href="basicstuff.html#derivater.MathObject.may_depend_on" title="derivater.MathObject.may_depend_on"><code class="xref py py-meth docutils literal"><span class="pre">may_depend_on()</span></code></a>, so let’s do that by almost copy/pasting the
+code from the docs:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Base2Log</span><span class="p">(</span><span class="n">MathObject</span><span class="p">):</span>
+    <span class="o">...</span>
+    <span class="k">def</span> <span class="nf">apply_to_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">log2</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numerus</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Now we can already do lots of stuff, e.g. <code class="docutils literal"><span class="pre">log2(2*x).replace(2*x,</span> <span class="pre">y)</span></code> to get
+<code class="docutils literal"><span class="pre">log2(y)</span></code>. The <code class="docutils literal"><span class="pre">log2(x).may_depend_on(x)</span></code> thing now returns <code class="docutils literal"><span class="pre">True</span></code>
+correctly, but <code class="docutils literal"><span class="pre">log2(x).derivative(x)</span></code> raises an error:</p>
+<div class="highlight-none"><div class="highlight"><pre><span></span>Traceback (most recent call last):
+  ...
+TypeError: cannot take derivative of log2(x) with respect to x
+</pre></div>
+</div>
+<p>But we know that <code class="docutils literal"><span class="pre">log2</span></code> is a differentiable function, so we could override
+<a class="reference internal" href="basicstuff.html#derivater.MathObject.derivative" title="derivater.MathObject.derivative"><code class="xref py py-meth docutils literal"><span class="pre">derivative()</span></code></a> to fix this.</p>
+<p>We can fix the <code class="docutils literal"><span class="pre">log2(x)</span> <span class="pre">==</span> <span class="pre">log2(x)</span></code> problem by applying a simple decorator:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">derivater</span> <span class="k">import</span> <span class="n">eq_and_hash</span>
+
+<span class="nd">@eq_and_hash</span><span class="p">({</span><span class="s1">&#39;numerus&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+<span class="k">class</span> <span class="nc">Base2Log</span><span class="p">(</span><span class="n">MathObject</span><span class="p">):</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>Here are the docs of <a class="reference internal" href="#derivater.eq_and_hash" title="derivater.eq_and_hash"><code class="xref py py-func docutils literal"><span class="pre">eq_and_hash()</span></code></a>.</p>
+<dl class="function">
+<dt id="derivater.eq_and_hash">
+<code class="descclassname">derivater.</code><code class="descname">eq_and_hash</code><span class="sig-paren">(</span><em>converters</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#eq_and_hash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.eq_and_hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>A decorator that adds <code class="docutils literal"><span class="pre">__eq__</span></code> and <code class="docutils literal"><span class="pre">__hash__</span></code> methods to a class.</p>
+<p>If you want to make a MathObject subclass that is used like
+this…</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">t</span> <span class="o">=</span> <span class="n">Toot</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="p">[</span><span class="n">c</span><span class="p">,</span> <span class="n">d</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>…then you should also implement <code class="docutils literal"><span class="pre">__eq__</span></code> and <code class="docutils literal"><span class="pre">__hash__</span></code>. They should
+treat the objects as equal when they are identical (not just same value),
+e.g. <code class="docutils literal"><span class="pre">ln(x**2)</span> <span class="pre">==</span> <span class="pre">ln(x**2)</span></code> and <code class="docutils literal"><span class="pre">hash(ln(x**2))</span> <span class="pre">==</span> <span class="pre">hash(ln(x**2))</span></code>, but
+<code class="docutils literal"><span class="pre">ln(x**2)</span> <span class="pre">!=</span> <span class="pre">2*ln(x)</span></code> and <code class="docutils literal"><span class="pre">hash(ln(x**2))</span> <span class="pre">!=</span> <span class="pre">hash(2*ln(x))</span></code>. So, our
+<code class="docutils literal"><span class="pre">Toot</span></code> class can be written like this…</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Toot</span><span class="p">(</span><span class="n">derivater</span><span class="o">.</span><span class="n">MathObject</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">cdlist</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">=</span> <span class="n">a</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="n">b</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cdlist</span> <span class="o">=</span> <span class="n">cdlist</span>
+
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Toot</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="c1"># convert self.cdlist to a set so its order</span>
+        <span class="c1"># doesn&#39;t matter</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">a</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">b</span> <span class="ow">and</span>
+                <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cdlist</span><span class="p">)</span> <span class="o">==</span> <span class="nb">set</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">cdlist</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># reuse tuple&#39;s __hash__, but convert cdlist</span>
+        <span class="c1"># to a frozenset because sets aren&#39;t hashable</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">a</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="p">,</span> <span class="nb">frozenset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cdlist</span><span class="p">)))</span>
+</pre></div>
+</div>
+<p>…or like this:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="nd">@derivater</span><span class="o">.</span><span class="n">eq_and_hash</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;cdlist&#39;</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">})</span>
+<span class="k">class</span> <span class="nc">Toot</span><span class="p">(</span><span class="n">derivater</span><span class="o">.</span><span class="n">MathObject</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">bclist</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">=</span> <span class="n">a</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="n">b</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cdlist</span> <span class="o">=</span> <span class="n">cdlist</span>
+</pre></div>
+</div>
+<p>Here <code class="docutils literal"><span class="pre">'a':</span> <span class="pre">None,</span> <span class="pre">'b':</span> <span class="pre">None</span></code> means that <code class="docutils literal"><span class="pre">a</span></code> and <code class="docutils literal"><span class="pre">b</span></code> will be hashed and
+equal compared as is, and <code class="docutils literal"><span class="pre">cdlist=frozenset</span></code> means that
+<code class="docutils literal"><span class="pre">frozenset(cdlist)</span></code> will be used when hashing and comparing <code class="docutils literal"><span class="pre">cdlist</span></code>.
+This means that it doesn’t matter which order things are in, but any
+duplicates are ignored.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="common-mathobject-subclasses">
+<h2>Common MathObject Subclasses<a class="headerlink" href="#common-mathobject-subclasses" title="Permalink to this headline">¶</a></h2>
+<p>It may be useful to inspect these objects. For example, the
+<code class="docutils literal"><span class="pre">Base2Log.simplify()</span></code> method in <a class="reference internal" href="#log2-class-example"><span class="std std-ref">the above example</span></a>
+might look like this:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">simplify</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">numerus</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">numerus</span><span class="o">.</span><span class="n">simplify</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">numerus</span><span class="p">,</span> <span class="n">Pow</span><span class="p">)</span> <span class="ow">and</span> <span class="n">numerus</span><span class="o">.</span><span class="n">base</span> <span class="o">==</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+        <span class="c1"># log2(2**x) == x</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">numerus</span><span class="o">.</span><span class="n">exponent</span>
+    <span class="o">...</span><span class="n">more</span> <span class="n">checks</span> <span class="n">here</span><span class="o">...</span>
+    <span class="k">return</span> <span class="n">log2</span><span class="p">(</span><span class="n">numerus</span><span class="p">)</span>    <span class="c1"># cannot simplify more :(</span>
+</pre></div>
+</div>
+<p id="addmulpow">Another reason why you might need to know something about the stuff documented
+below is to e.g. add things together <em>without</em>
+<a class="reference internal" href="basicstuff.html#derivater.MathObject.gentle_simplify" title="derivater.MathObject.gentle_simplify"><code class="xref py py-meth docutils literal"><span class="pre">gentle_simplify()</span></code></a>. For example, <code class="docutils literal"><span class="pre">x</span> <span class="pre">+</span> <span class="pre">y</span></code> is actually
+<code class="docutils literal"><span class="pre">Add([x,</span> <span class="pre">y]).gentle_simplify()</span></code>, but <code class="docutils literal"><span class="pre">Add([x,</span> <span class="pre">y])</span></code> is not simplified at
+all:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mathify</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">mathify</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="go">3</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Add</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>   <span class="c1"># mathifies automatically, but doesn&#39;t gentle_simplify()</span>
+<span class="go">1 + 2</span>
+</pre></div>
+</div>
+<p>Here’s a handy table:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="28%" />
+<col width="72%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">This…</th>
+<th class="head">…actually does this</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">x</span> <span class="pre">+</span> <span class="pre">y</span></code></td>
+<td><code class="docutils literal"><span class="pre">Add([x,</span> <span class="pre">y])</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">-x</span></code></td>
+<td><code class="docutils literal"><span class="pre">Mul([-1,</span> <span class="pre">x])</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">x</span> <span class="pre">-</span> <span class="pre">y</span></code></td>
+<td><code class="docutils literal"><span class="pre">Add([x,</span> <span class="pre">Mul([-1,</span> <span class="pre">y])])</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">x</span> <span class="pre">*</span> <span class="pre">y</span></code></td>
+<td><code class="docutils literal"><span class="pre">Mul([x,</span> <span class="pre">y])</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">1</span> <span class="pre">/</span> <span class="pre">y</span></code></td>
+<td><code class="docutils literal"><span class="pre">Pow(y,</span> <span class="pre">-1)</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal"><span class="pre">x</span> <span class="pre">/</span> <span class="pre">y</span></code></td>
+<td><code class="docutils literal"><span class="pre">Mul([x,</span> <span class="pre">Pow(y,</span> <span class="pre">-1)])</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal"><span class="pre">x</span> <span class="pre">**</span> <span class="pre">y</span></code></td>
+<td><code class="docutils literal"><span class="pre">Pow(x,</span> <span class="pre">y)</span></code></td>
+</tr>
+</tbody>
+</table>
+<dl class="class">
+<dt id="derivater.Add">
+<em class="property">class </em><code class="descclassname">derivater.</code><code class="descname">Add</code><span class="sig-paren">(</span><em>objects</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#Add"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.Add" title="Permalink to this definition">¶</a></dt>
+<dd><p>An object that represents a bunch of things added together.</p>
+<dl class="attribute">
+<dt id="derivater.Add.objects">
+<code class="descname">objects</code><a class="headerlink" href="#derivater.Add.objects" title="Permalink to this definition">¶</a></dt>
+<dd><p>List of the added objects.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="derivater.Add.gentle_simplify">
+<code class="descname">gentle_simplify</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#Add.gentle_simplify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.Add.gentle_simplify" title="Permalink to this definition">¶</a></dt>
+<dd><p>This override of <a class="reference internal" href="basicstuff.html#derivater.MathObject.gentle_simplify" title="derivater.MathObject.gentle_simplify"><code class="xref py py-meth docutils literal"><span class="pre">MathObject.gentle_simplify()</span></code></a> does these things:</p>
+<ul class="simple">
+<li>All the added <a class="reference internal" href="#derivater.Add.objects" title="derivater.Add.objects"><code class="xref py py-attr docutils literal"><span class="pre">objects</span></code></a> are simplified gently.</li>
+<li>Nested Adds are combined into one; <code class="docutils literal"><span class="pre">Add([a,</span> <span class="pre">Add([b,</span> <span class="pre">c])])</span></code> becomes
+<code class="docutils literal"><span class="pre">Add([a,</span> <span class="pre">b,</span> <span class="pre">c])</span></code>.</li>
+<li>Integers are combined into one integer, and that’s always the last
+item in <a class="reference internal" href="#derivater.Add.objects" title="derivater.Add.objects"><code class="xref py py-attr docutils literal"><span class="pre">objects</span></code></a>.</li>
+<li>Repeatedly added objects are turned into <a class="reference internal" href="#derivater.Mul" title="derivater.Mul"><code class="xref py py-class docutils literal"><span class="pre">Muls</span></code></a>;
+<code class="docutils literal"><span class="pre">Add([a,</span> <span class="pre">a,</span> <span class="pre">b])</span></code> becomes <code class="docutils literal"><span class="pre">Add([2*a,</span> <span class="pre">b])</span></code>.</li>
+<li>Integer coefficients are combined: <code class="docutils literal"><span class="pre">Add([2*a,</span> <span class="pre">3*b,</span> <span class="pre">4*a])</span></code> becomes
+<code class="docutils literal"><span class="pre">Add([6*a,</span> <span class="pre">3*b])</span></code>.</li>
+<li>If there’s exactly 1 object left, it is returned instead of an Add
+object.</li>
+<li>If there are no objects left, <code class="docutils literal"><span class="pre">mathify(0)</span></code> is returned instead of
+an Add object.</li>
+</ul>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="derivater.Mul">
+<em class="property">class </em><code class="descclassname">derivater.</code><code class="descname">Mul</code><span class="sig-paren">(</span><em>objects</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#Mul"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.Mul" title="Permalink to this definition">¶</a></dt>
+<dd><p>An object that represents a bunch of stuff multiplied with each other.</p>
+<dl class="attribute">
+<dt id="derivater.Mul.objects">
+<code class="descname">objects</code><a class="headerlink" href="#derivater.Mul.objects" title="Permalink to this definition">¶</a></dt>
+<dd><p>List of the multiplied objects.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="derivater.Mul.gentle_simplify">
+<code class="descname">gentle_simplify</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#Mul.gentle_simplify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.Mul.gentle_simplify" title="Permalink to this definition">¶</a></dt>
+<dd><p>This override of <a class="reference internal" href="basicstuff.html#derivater.MathObject.gentle_simplify" title="derivater.MathObject.gentle_simplify"><code class="xref py py-meth docutils literal"><span class="pre">MathObject.gentle_simplify()</span></code></a> does these things:</p>
+<ul class="simple">
+<li>All the multiplied <a class="reference internal" href="#derivater.Mul.objects" title="derivater.Mul.objects"><code class="xref py py-attr docutils literal"><span class="pre">objects</span></code></a> are simplified gently.</li>
+<li>Nested Muls are combined into one; <code class="docutils literal"><span class="pre">Mul([a,</span> <span class="pre">Mul([b,</span> <span class="pre">c])])</span></code> becomes
+<code class="docutils literal"><span class="pre">Mul([a,</span> <span class="pre">b,</span> <span class="pre">c])</span></code>.</li>
+<li>Integers are combined into one integer, and that’s always the first
+item in <a class="reference internal" href="#derivater.Mul.objects" title="derivater.Mul.objects"><code class="xref py py-attr docutils literal"><span class="pre">objects</span></code></a>. (Note that <a class="reference internal" href="#derivater.Add.gentle_simplify" title="derivater.Add.gentle_simplify"><code class="xref py py-class docutils literal"><span class="pre">Add.gentle_simplify</span></code></a> does
+the same thing, but it puts the integer last; this means that
+<code class="docutils literal"><span class="pre">3</span> <span class="pre">+</span> <span class="pre">x*2</span></code> turns into <code class="docutils literal"><span class="pre">2*x</span> <span class="pre">+</span> <span class="pre">3</span></code>.)</li>
+<li>Repeatedly added objects are turned into <a class="reference internal" href="#derivater.Pow" title="derivater.Pow"><code class="xref py py-class docutils literal"><span class="pre">Pows</span></code></a>;
+<code class="docutils literal"><span class="pre">Mul([a,</span> <span class="pre">a,</span> <span class="pre">b])</span></code> becomes <code class="docutils literal"><span class="pre">Mul([a**2,</span> <span class="pre">b])</span></code>.</li>
+<li>Powers with same base are combined: <code class="docutils literal"><span class="pre">Mul([x**a,</span> <span class="pre">y,</span> <span class="pre">x**b])</span></code> becomes
+<code class="docutils literal"><span class="pre">Mul([x**(a</span> <span class="pre">+</span> <span class="pre">b),</span> <span class="pre">y])</span></code>.</li>
+<li>If there’s exactly 1 object left, it is returned instead of a Mul
+object.</li>
+<li>If there are no objects left, <code class="docutils literal"><span class="pre">mathify(1)</span></code> is returned instead of
+a Mul object.</li>
+</ul>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="derivater.Pow">
+<em class="property">class </em><code class="descclassname">derivater.</code><code class="descname">Pow</code><span class="sig-paren">(</span><em>base</em>, <em>exponent</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#Pow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.Pow" title="Permalink to this definition">¶</a></dt>
+<dd><p>An object that represents <code class="docutils literal"><span class="pre">base</span> <span class="pre">**</span> <span class="pre">exponent</span></code>.</p>
+<dl class="attribute">
+<dt id="derivater.Pow.base">
+<code class="descname">base</code><a class="headerlink" href="#derivater.Pow.base" title="Permalink to this definition">¶</a></dt>
+<dt id="derivater.Pow.exponent">
+<code class="descname">exponent</code><a class="headerlink" href="#derivater.Pow.exponent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pow objects represent <code class="docutils literal"><span class="pre">base**exponent</span></code>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="derivater.Pow.gentle_simplify">
+<code class="descname">gentle_simplify</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#Pow.gentle_simplify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.Pow.gentle_simplify" title="Permalink to this definition">¶</a></dt>
+<dd><p>This override of <a class="reference internal" href="basicstuff.html#derivater.MathObject.gentle_simplify" title="derivater.MathObject.gentle_simplify"><code class="xref py py-meth docutils literal"><span class="pre">MathObject.gentle_simplify()</span></code></a> does these things:</p>
+<ul class="simple">
+<li>The base and exponent are simplified gently.</li>
+<li>If the base is also a power, the powers are combined into one;
+<code class="docutils literal"><span class="pre">Pow(Pow(a,</span> <span class="pre">b),</span> <span class="pre">c)</span></code> becomes <code class="docutils literal"><span class="pre">Pow(a,</span> <span class="pre">b*c)</span></code>.</li>
+<li>If the base is a <a class="reference internal" href="#derivater.Mul" title="derivater.Mul"><code class="xref py py-class docutils literal"><span class="pre">Mul</span></code></a>, the power is separated into two
+powers; <code class="docutils literal"><span class="pre">Pow(a*b,</span> <span class="pre">c)</span></code> becomes <code class="docutils literal"><span class="pre">Pow(a,</span> <span class="pre">c)</span> <span class="pre">*</span> <span class="pre">Pow(b,</span> <span class="pre">c)</span></code>.</li>
+<li>If the base and the exponent are 0, this does the same wrongness as
+Python. Try <code class="docutils literal"><span class="pre">0**0</span></code> in a Python interpreter to find out what it is
+and don’t blame me for returning a finite value for an indeterminate
+form; blame Python devs instead.</li>
+<li>If the base is 0, <code class="docutils literal"><span class="pre">mathify(0)</span></code> is returned.</li>
+<li>If the base is 1, <code class="docutils literal"><span class="pre">mathify(1)</span></code> is returned.</li>
+<li>If the exponent is 0, <code class="docutils literal"><span class="pre">mathify(1)</span></code> is returned.</li>
+<li>If the exponent is 1, the base is returned.</li>
+<li>If the base and exponent are integers such that the whole thing is
+known to be an integer, <code class="docutils literal"><span class="pre">mathify(that</span> <span class="pre">integer)</span></code> is returned.
+Currently this does not detect all possible ways to create an
+integer.</li>
+</ul>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="derivater.Integer">
+<em class="property">class </em><code class="descclassname">derivater.</code><code class="descname">Integer</code><span class="sig-paren">(</span><em>python_int</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/derivater/_base.html#Integer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#derivater.Integer" title="Permalink to this definition">¶</a></dt>
+<dd><p>An integer with a known value.</p>
+<p>You can create Integer objects yourself or, equivalently, you can pass a
+Python int to <a class="reference internal" href="basicstuff.html#derivater.mathify" title="derivater.mathify"><code class="xref py py-func docutils literal"><span class="pre">mathify()</span></code></a>.</p>
+<dl class="attribute">
+<dt id="derivater.Integer.python_int">
+<code class="descname">python_int</code><a class="headerlink" href="#derivater.Integer.python_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>The equivalent python <code class="docutils literal"><span class="pre">int</span></code> object.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Custom Math Objects and Stuff</a><ul>
+<li><a class="reference internal" href="#custom-math-object-example">Custom Math Object Example</a></li>
+<li><a class="reference internal" href="#common-mathobject-subclasses">Common MathObject Subclasses</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="trig.html" title="previous chapter">Trig Functions</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/custom.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Akuli.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/custom.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
