@@ -1,10 +1,11 @@
 import collections
+import operator
 
 
 def eq_and_hash(converters):
     """A decorator that adds ``__eq__`` and ``__hash__`` methods to a class.
 
-    If you want to make a :class:`MathObject` subclass that is used like
+    If you want to make a MathObject subclass that is used like
     this...
     ::
 
@@ -27,12 +28,14 @@ def eq_and_hash(converters):
             def __eq__(self, other):
                 if not isinstance(other, Toot):
                     return NotImplemented
+                # convert self.cdlist to a set so its order
+                # doesn't matter
                 return (self.a == other.a and self.b == other.b and
                         set(self.cdlist) == set(other.cdlist))
 
             def __hash__(self):
-                # reuse tuple's __hash__, but convert cdlist to a frozenset
-                # because lists aren't hashable
+                # reuse tuple's __hash__, but convert cdlist
+                # to a frozenset because sets aren't hashable
                 return hash((self.a, self.b, frozenset(self.cdlist)))
 
     ...or like this::
@@ -76,9 +79,9 @@ def eq_and_hash(converters):
 
 
 def mathify(obj):
-    """Convert a Python number into a :class:`MathObject`.
+    """Convert a Python number into a MathObject.
 
-    If *obj* is already a :class:`MathObject`, it's returned as is.
+    If *obj* is already a MathObject, it's returned as is.
     """
     if isinstance(obj, MathObject):
         return obj
@@ -104,6 +107,9 @@ class MathObject:
 
         Pretty-printing objects is usually implemented with ``__repr__()``. For
         example, :class:`.NaturalLog` does this::
+
+            def __init__(self, numerus):
+                self.numerus = mathify(numerus)
 
             def __repr__(self):
                 return 'ln(%r)' % self.numerus
@@ -140,7 +146,7 @@ bject contains.
         :class:`.NaturalLog` does something like this::
 
             def __init__(self, numerus):
-                self.numerus = numerus
+                self.numerus = mathify(numerus)
 
             def apply_to_content(self, func):
                 return ln(func(self.numerus))
@@ -161,8 +167,9 @@ bject contains.
         >>> (x + y*z).apply_recursively(Lol)
         Lol(Lol(x) + Lol(Lol(y)*Lol(z)))
 
-        If you think you need to override this, you might want to override
-        :func:`apply_to_content` instead.
+        This function is implemented with :func:`apply_to_content`, so you
+        might want to override :func:`apply_to_content` instead if you think
+        you need to override this function.
         """
         result = self.apply_to_content(lambda obj: obj.apply_recursively(func))
         return func(result)
@@ -198,8 +205,12 @@ to.
     def may_depend_on(self, var):
         """Check if this variable depends on the value of *var*.
 
+        The *var* must be a :class:`Symbol`.
+
         By default, this checks if the content depends on anything using
-        :func:`apply_to_content`, and returns False if there is no content.
+        :meth:`apply_to_content`, and returns False if there is no content. If
+        you think you need to override this, you may want to override
+        :meth:`apply_to_content` instead.
         """
         for obj in self.get_content():
             if obj.may_depend_on(var):
@@ -217,8 +228,8 @@ to.
         ln(2)
 
         If you think you want to override this, you may want to override
-        :meth:`apply_recursively` instead; this method is implemented with
-        that.
+        :meth:`apply_to_content` instead; this method is implemented with
+        :meth:`apply_recursively`, and that uses :meth:`apply_to_content`.
         """
         old = mathify(old)
         new = mathify(new)
@@ -230,7 +241,6 @@ to.
 
         return self.apply_recursively(replacer)
 
-    # wrt should be a Symbol
     def derivative(self, wrt):
         """Return the derivative with respect to *wrt*.
 
@@ -240,19 +250,79 @@ to.
         0
         >>> sin(f(x)).derivative(x)   # but SymbolFunctions work better
         cos(f(x))*f'(x)
+
+        The *wrt* must be a :class:`Symbol`.
+
+        If you override this, remember the chain rule! For example,
+        :class:`NaturalLog` does something like this...
+        ::
+
+            def __init__(self, numerus):
+                self.numerus = mathify(numerus)
+
+            def derivative(self, wrt):
+                return 1/self.numerus * self.numerus.derivative(wrt)
+
+        ...so we get this:
+
+        >>> ln(x).derivative(x)     # 1/x * x.derivative(x)
+        1 / x
+        >>> ln(f(x)).derivative(x)  # 1/f(x) * f(x).derivative(x)
+        f'(x) / f(x)
+        >>> ln(2).derivative(x)     # 1/mathify(2) * mathify(2).derivative(x)
+        0
         """
         if not self.may_depend_on(wrt):
             return mathify(0)
         raise TypeError("cannot take derivative of %r with respect to %r"
                         % (self, wrt))
 
+    def gentle_simplify(self):
+        """Try to make the object look simpler.
+
+        Usually there's a simple, structury class with a Capitalized name, and
+        a convenient constructor function with a lowercase name (often shorter)
+        that creates an instance of the class and calls ``gentle_simplify()``.
+        Like this::
+
+            class NaturalLog:
+                ...
+
+            def ln(x):
+                return NaturalLog(x).gentle_simplify()
+
+        This way you can conveniently take a logarithm with :func:`ln`, but if
+        you don't want to automagically convert things like ``ln(1)`` into
+        ``0``, you can use :class:`NaturalLog` directly.
+
+        >>> ln(1)           # returns mathify(0)
+        0
+        >>> NaturalLog(1)   # returns a NaturalLog object
+        ln(1)
+        >>> NaturalLog(1).gentle_simplify()
+        0
+
+        Using the ``+``, ``-``, ``*``, ``/`` and ``**`` operators with
+        MathObjects calls ``gentle_simplify()`` automagically. See
+        :ref:`this thing <addmulpow>` if you want to avoid that.
+        """
+        return self.apply_to_content(operator.methodcaller('gentle_simplify'))
+
+    def simplify(self):
+        """Make the object look as simple as possible.
+
+        This is like :meth:`gentle_simplify`, but more aggressive and usually
+        not called automatically.
+        """
+        return self.apply_to_content(operator.methodcaller('simplify'))
+
     def __add__(self, other):   # self + other
-        return add([self, other])
+        return Add([self, other]).gentle_simplify()
 
     __radd__ = __add__          # other + self
 
     def __neg__(self):          # -self
-        return mul([-1, self])
+        return Mul([-1, self]).gentle_simplify()
 
     def __sub__(self, other):   # self - other
         return self + (-other)
@@ -261,7 +331,7 @@ to.
         return other + (-self)
 
     def __mul__(self, other):   # self * other
-        return mul([self, other])
+        return Mul([self, other]).gentle_simplify()
 
     __rmul__ = __mul__          # other * self
 
@@ -275,10 +345,10 @@ to.
         return other * self**(-1)
 
     def __pow__(self, other):   # self ** other
-        return pow(self, other)
+        return Pow(self, other).gentle_simplify()
 
     def __rpow__(self, other):  # other ** self
-        return pow(other, self)
+        return Pow(other, self).gentle_simplify()
 
 
 @eq_and_hash({'name': None})
@@ -358,7 +428,7 @@ class SymbolFunction(MathObject):
     >>> f(x).derivative(x).derivative(x).derivative_count
     2
     >>> (f(x) * g(x)).derivative(x)
-    f'(x)*g(x) + g'(x)*f(x)
+    f'(x)*g(x) + f(x)*g'(x)
     >>> f(g(x)).derivative(x)
     f'(g(x))*g'(x)
     """
@@ -391,6 +461,10 @@ class Integer(MathObject):
 
     You can create Integer objects yourself or, equivalently, you can pass a
     Python int to :func:`mathify`.
+
+    .. attribute:: python_int
+
+        The equivalent python ``int`` object.
     """
 
     def __init__(self, python_int):
@@ -411,7 +485,10 @@ class Integer(MathObject):
 
 def _looks_like_negative(expr):
     if isinstance(expr, Mul):
-        return (isinstance(expr.objects[0], Integer) and
+        # len(expr.objects) >= 1 would be more readable in this context, but
+        # pep8 **IS** a lawbook.... so..
+        return (expr.objects and
+                isinstance(expr.objects[0], Integer) and
                 expr.objects[0].python_int < 0)
     if isinstance(expr, Integer):
         return expr.python_int < 0
@@ -422,27 +499,13 @@ def _looks_like_negative(expr):
 class Add(MathObject):
     """An object that represents a bunch of things added together.
 
-    All ``Add`` objects should satisfy these things:
-
-    * There's never an ``Add`` directly inside an ``Add``;
-      ``Add([a, b, Add([c, d])])`` is expaneded to ``Add([a, b, c, d])``.
-    * The list of added objects is accessible as ``add_object.objects`` and it
-      always contains at least 2 elements.
-    * The object list does not contain zeros.
-    * The object list can contain at most 1 :class:`Integer`.
-    * If the object list contains an integer, it's ``objects[0]``.
-
-    Substraction like ``a - b`` is represented as
-    ``Add([a, Mul([Integer(-1), b])])``.
-
     .. attribute:: objects
 
         List of the added objects.
     """
 
     def __init__(self, objects):
-        assert len(objects) >= 2
-        self.objects = objects
+        self.objects = list(map(mathify, objects))
 
     def __repr__(self):
         result = [self.objects[0].add_parenthesize()]
@@ -458,7 +521,7 @@ class Add(MathObject):
 
     # TODO: how about something like (a+b+c+x).replace(b+c, y)?
     def apply_to_content(self, func):
-        return add(map(func, self.objects))
+        return Add(map(func, self.objects))
 
     def mul_parenthesize(self):
         return '(' + repr(self) + ')'
@@ -466,22 +529,82 @@ class Add(MathObject):
     def derivative(self, wrt):
         # d/dx (f(x) + g(x)) = f'(x) + g'(x)
         # also works with more than 2 functions
-        return add(obj.derivative(wrt) for obj in self.objects)
+        return (Add(obj.derivative(wrt) for obj in self.objects)
+                .gentle_simplify())
+
+    def gentle_simplify(self):
+        """This override of :meth:`.MathObject.gentle_simplify` does these thi\
+ngs:
+
+        * All the added :attr:`objects` are simplified gently.
+        * Nested Adds are combined into one; ``Add([a, Add([b, c])])`` becomes
+          ``Add([a, b, c])``.
+        * Integers are combined into one integer, and that's always the last
+          item in :attr:`objects`.
+        * Repeatedly added objects are turned into :class:`Muls <Mul>`;
+          ``Add([a, a, b])`` becomes ``Add([2*a, b])``.
+        * Integer coefficients are combined: ``Add([2*a, 3*b, 4*a])`` becomes
+          ``Add([6*a, 3*b])``.
+        * If there's exactly 1 object left, it is returned instead of an Add
+          object.
+        * If there are no objects left, ``mathify(0)`` is returned instead of
+          an Add object.
+        """
+        flat = []
+        for obj in map(operator.methodcaller('gentle_simplify'), self.objects):
+            if isinstance(obj, Add):
+                flat.extend(obj.objects)
+            else:
+                flat.append(obj)
+
+        for obj in flat:
+            assert obj == obj.gentle_simplify(), obj
+
+        # extract integers
+        int_value = 0
+        no_ints = []
+        for obj in flat:
+            if isinstance(obj, Integer):
+                int_value += obj.python_int
+            else:
+                no_ints.append(obj)
+
+        # turn repeated objects into _Muls
+        while max(collections.Counter(no_ints).values(), default=1) != 1:
+            no_ints = [
+                (value * coeff).gentle_simplify()
+                for value, coeff in collections.Counter(no_ints).items()]
+
+        # combine integer coefficients: 2*x + 3*x becomes 5*x
+        counts = collections.defaultdict(int)       # {the_obj: coeff}
+        for obj in no_ints:
+            if isinstance(obj, Mul) and isinstance(obj.objects[0], Integer):
+                counts[Mul(obj.objects[1:]).gentle_simplify()] += (
+                    obj.objects[0].python_int)
+            else:
+                counts[obj] += 1
+
+        # should be simple enough by now :D
+        parts = [coeff * obj for obj, coeff in counts.items()]
+        while mathify(0) in parts:
+            parts.remove(mathify(0))
+        if int_value:
+            parts.append(Integer(int_value))
+
+        if not parts:
+            return mathify(0)
+        if len(parts) == 1:
+            return parts[0]
+        return Add(parts)
+
+    # TODO
+    def simplify(self):
+        return Add(part.simplify() for part in self.objects).gentle_simplify()
 
 
 @eq_and_hash({'objects': frozenset})
 class Mul(MathObject):
     """An object that represents a bunch of stuff multiplied with each other.
-
-    All ``Mul`` objects should satisfy these things:
-
-        * There's never a ``Mul`` directly inside a ``Mul``;
-          ``Mul([a, b, Mul([c, d])])`` is expaneded to ``Mul([a, b, c, d])``.
-        * The list of multiplied objects is accessible as
-          ``mul_object.objects`` and it always contains at least 2 elements.
-        * The object list does not contain ones or zeros.
-        * The object list can contain at most 1 integer (positive or negative).
-        * If the object list contains an integer, it's ``objects[0]``.
 
     .. attribute:: objects
 
@@ -489,8 +612,7 @@ class Mul(MathObject):
     """
 
     def __init__(self, objects):
-        assert len(objects) >= 2
-        self.objects = objects
+        self.objects = list(map(mathify, objects))
 
     def __repr__(self):
         if _looks_like_negative(self):
@@ -507,18 +629,17 @@ class Mul(MathObject):
                 top.append(obj)
 
         if not bottom:
-            assert len(top) >= 2
-            return '*'.join(obj.mul_parenthesize() for obj in top)
+            return '*'.join(obj.mul_parenthesize() for obj in top) or '1'
 
         # the top uses mul_parenthesize() instead of repr() because otherwise
         # repr((x + y)/z) == 'x + y / z'
-        top_string = mul(top).mul_parenthesize()
+        top_string = repr(Mul(top))
         bottom_string = (bottom[0].mul_parenthesize() if len(bottom) == 1
-                         else mul(bottom).pow_parenthesize())
+                         else Mul(bottom).pow_parenthesize())
         return top_string + ' / ' + bottom_string
 
     def apply_to_content(self, func):
-        return mul(map(func, self.objects))
+        return Mul(map(func, self.objects))
 
     def pow_parenthesize(self):
         return '(' + repr(self) + ')'
@@ -529,39 +650,101 @@ class Mul(MathObject):
         # function multiplied by all other functions
         parts = []
         for i in range(len(self.objects)):      # OMG ITS RANGELEN KITTENS DIE
-            others = self.objects[:i] + self.objects[i+1:]
-            parts.append(self.objects[i].derivative(wrt) * mul(others))
-        return add(parts)
+            parts.append(Mul(self.objects[:i] +
+                             [self.objects[i].derivative(wrt)] +
+                             self.objects[i+1:]))
+        return Add(parts).gentle_simplify()
+
+    def gentle_simplify(self):
+        """This override of :meth:`.MathObject.gentle_simplify` does these thi\
+ngs:
+
+        * All the multiplied :attr:`objects` are simplified gently.
+        * Nested Muls are combined into one; ``Mul([a, Mul([b, c])])`` becomes
+          ``Mul([a, b, c])``.
+        * Integers are combined into one integer, and that's always the first
+          item in :attr:`objects`. (Note that :class:`Add.gentle_simplify` does
+          the same thing, but it puts the integer last; this means that
+          ``3 + x*2`` turns into ``2*x + 3``.)
+        * Repeatedly added objects are turned into :class:`Pows <Pow>`;
+          ``Mul([a, a, b])`` becomes ``Mul([a**2, b])``.
+        * Powers with same base are combined: ``Mul([x**a, y, x**b])`` becomes
+          ``Mul([x**(a + b), y])``.
+        * If there's exactly 1 object left, it is returned instead of a Mul
+          object.
+        * If there are no objects left, ``mathify(1)`` is returned instead of
+          a Mul object.
+        """
+        flat = []
+        for obj in map(operator.methodcaller('gentle_simplify'), self.objects):
+            if isinstance(obj, Mul):
+                flat.extend(obj.objects)
+            elif obj == mathify(0):
+                return mathify(0)
+            else:
+                flat.append(obj)
+
+        for obj in flat:
+            assert obj == obj.gentle_simplify(), (
+                "%r didn't simplify gently" % obj)
+
+        # extract integers
+        int_value = 1
+        no_ints = []
+        for obj in flat:
+            if isinstance(obj, Integer):
+                int_value *= obj.python_int
+            else:
+                no_ints.append(obj)
+
+        # turn repeated objects into Pows
+        while max(collections.Counter(no_ints).values(), default=1) != 1:
+            no_ints = [
+                base ** exponent
+                for base, exponent in collections.Counter(no_ints).items()]
+
+        # combine powers with same bases
+        powers = {}     # {base: exponent}
+        for obj in no_ints:
+            if isinstance(obj, Pow):
+                base = obj.base
+                exponent = obj.exponent
+            else:
+                base = obj
+                exponent = mathify(1)
+            powers[base] = powers.get(base, mathify(0)) + exponent
+
+        # should be simple enough
+        parts = [base ** exponent for base, exponent in powers.items()]
+        while mathify(1) in parts:
+            parts.remove(mathify(1))
+        if int_value != 1:
+            parts.insert(0, mathify(int_value))
+
+        if not parts:
+            return mathify(1)
+        if len(parts) == 1:
+            return parts[0]
+        return Mul(parts)
+
+    # TODO
+    def simplify(self):
+        return Mul(part.simplify() for part in self.objects).gentle_simplify()
 
 
-# low-level base**exponent object
-#   * (x**y)**z is not allowed, must be converted to x**(y*z)
-#   * base and exponent must not be 1
-#   * division is represented with Pow(x, mathify(-1))
 @eq_and_hash({'base': None, 'exponent': None})
 class Pow(MathObject):
     """An object that represents ``base ** exponent``.
-
-    All ``Pow`` objects should satisfy these things:
-
-        * The base cannot be a ``Pow`` object; ``(x**y)**z`` must be converted
-          to ``x**(y*z)``.
-        * The base and the exponent must not be 1.
-
-    Division is represented as ``Pow(x, something_negative)``.
 
     .. attribute:: base
                    exponent
 
         Pow objects represent ``base**exponent``.
-
     """
 
     def __init__(self, base, exponent):
-        assert base != mathify(1) and exponent != mathify(1)
-        assert not isinstance(base, Pow)
-        self.base = base
-        self.exponent = exponent
+        self.base = mathify(base)
+        self.exponent = mathify(exponent)
 
     def __repr__(self):
         if self.exponent == mathify(-1):
@@ -575,7 +758,7 @@ class Pow(MathObject):
         return '(' + repr(self) + ')'
 
     def apply_to_content(self, func):
-        return pow(func(self.base), func(self.exponent))
+        return Pow(func(self.base), func(self.exponent))
 
     def derivative(self, wrt):
         # _explog.py wants lots of stuff from this file
@@ -604,138 +787,57 @@ class Pow(MathObject):
         result = rewrite.derivative(wrt)
         return result.replace(rewrite, self)    # a bit simpler
 
+    def gentle_simplify(self):
+        """This override of :meth:`.MathObject.gentle_simplify` does these thi\
+ngs:
 
-# high-level constructors
-# the docstrings say that these are equivalent to something with
-# operators, but the operator stuff just calls these (see MathObject)
-def add(objects):
-    """Add together an iterable of :class:`MathObjects <MathObject>`.
+        * The base and exponent are simplified gently.
+        * If the base is also a power, the powers are combined into one;
+          ``Pow(Pow(a, b), c)`` becomes ``Pow(a, b*c)``.
+        * If the base is a :class:`Mul`, the power is separated into two
+          powers; ``Pow(a*b, c)`` becomes ``Pow(a, c) * Pow(b, c)``.
+        * If the base and the exponent are 0, this does the same wrongness as
+          Python. Try ``0**0`` in a Python interpreter to find out what it is
+          and don't blame me for returning a finite value for an indeterminate
+          form; blame Python devs instead.
+        * If the base is 0, ``mathify(0)`` is returned.
+        * If the base is 1, ``mathify(1)`` is returned.
+        * If the exponent is 0, ``mathify(1)`` is returned.
+        * If the exponent is 1, the base is returned.
+        * If the base and exponent are integers such that the whole thing is
+          known to be an integer, ``mathify(that integer)`` is returned.
+          Currently this does not detect all possible ways to create an
+          integer.
+        """
+        base = self.base.gentle_simplify()
+        exponent = self.exponent.gentle_simplify()
+        if isinstance(base, Pow):
+            # (x**y)**z = x**(y * z)
+            return base.base ** (base.exponent * exponent)
+        if isinstance(base, Mul):
+            return (Mul(obj**self.exponent for obj in self.base.objects)
+                    .gentle_simplify())
 
-    This is equivalent to ``mathify(objects[0]) + mathify(objects[1]) + ... + \
-mathify(objects[len(objects)-1])``.
-    """
-    flattened = []
-    for obj in map(mathify, objects):
-        if isinstance(obj, Add):
-            flattened.extend(obj.objects)
-        elif obj != mathify(0):
-            flattened.append(obj)
-
-    # extract integers
-    # this is kind of tricky because -2 is represented as (-1)*2
-    int_value = 0
-    not_integers = []
-    for obj in flattened:
-        if isinstance(obj, Integer):
-            int_value += obj.python_int
-        else:
-            not_integers.append(obj)
-
-    # turn repeated objects into _Muls until nothing is repeated
-    result = not_integers
-    old_result = None
-    while result != old_result:
-        old_result = result
-        result = list(map(mul, collections.Counter(result).items()))
-
-    # don't turn x*y + y into (x + 1)*y,
-    # it wouldn't be too bad to combine integer coefficients though, e.g.
-    # like 2*x + 3*x == 5*x
-
-    # integer value goes last
-    if int_value != 0:
-        result.append(mathify(int_value))
-
-    if not result:
-        return mathify(0)
-    if len(result) == 1:
-        return result[0]
-    return Add(result)
-
-
-def _stupid_grouper(types, objects):
-    result = {klass: [] for klass in types}
-    result[None] = []
-
-    for obj in objects:
-        for klass in types:
-            if isinstance(obj, klass):
-                result[klass].append(obj)
-                break
-        else:
-            result[None].append(obj)    # no type
-
-    return result
-
-
-def mul(objects):
-    """Multiply together an iterable of :class:`MathObjects <MathObject>`.
-
-    This is equivalent to ``mathify(objects[0]) * mathify(objects[1]) * ... * \
-mathify(objects[len(objects)-1])``.
-    """
-    flattened = []
-    for obj in map(mathify, objects):
-        if isinstance(obj, Mul):
-            flattened.extend(obj.objects)
-        elif obj == mathify(0):
+        # TODO: buts, e.g. 0**x == 0  but x != 0 ???
+        if base == mathify(0) and exponent == mathify(0):
+            # python does this wrong, so let's blame it for the result...
+            return mathify(0**0)
+        if base == mathify(0):
             return mathify(0)
-        else:
-            flattened.append(obj)
+        if base == mathify(1):
+            return mathify(1)
+        if exponent == mathify(0):
+            return mathify(1)
+        if exponent == mathify(1):
+            return base
 
-    # extract integers
-    int_value = 1
-    not_integers = []
-    for value in flattened:
-        if isinstance(value, Integer):
-            int_value *= value.python_int
-        else:
-            not_integers.append(value)
+        if (isinstance(base, Integer) and isinstance(exponent, Integer) and
+                (exponent.python_int >= 0 or base == mathify(-1))):
+            # this must be an integer
+            # TODO: handle more cases
+            return mathify(round(base.python_int ** exponent.python_int))
 
-    # turn repeated objects into _Pows and group together _Pows with same base
-    powers = {}      # {base: exponent}
-    for obj in not_integers:
-        if isinstance(obj, Pow):
-            base = obj.base
-            exponent = obj.exponent
-        else:
-            base = obj
-            exponent = mathify(1)
-        powers[base] = powers.get(base, mathify(0)) + exponent
+        return Pow(base, exponent)
 
-    result = [pow(base, exponent) for base, exponent in powers.items()]
-
-    # integer coefficient goes first
-    if int_value != 1:
-        result = [Integer(int_value)] + result
-
-    if not result:
-        return mathify(1)
-    if len(result) == 1:
-        return result[0]
-    return Mul(result)
-
-
-# TODO: disallow zero division, now we have    mathify(1) / 0 * 0 == 0
-def pow(base, exponent):
-    """This is equivalent to ``mathify(base) ** mathify(exponent)``."""
-    base = mathify(base)
-    exponent = mathify(exponent)
-
-    if isinstance(base, Pow):
-        return pow(base.base, base.exponent * exponent)
-    if base == mathify(1):
-        return mathify(1)
-    if exponent == mathify(1):
-        return base
-    if exponent == mathify(0):
-        # python does 0**0 == 1... it can't be too bad not to handle
-        # base==0 specially
-        return mathify(1)
-    if (isinstance(base, Integer) and
-            isinstance(exponent, Integer) and
-            (exponent.python_int >= 0 or base == mathify(-1))):
-        # we know for sure it'll be an integer
-        # TODO: handle more corner cases
-        return mathify(round(base.python_int ** exponent.python_int))
-    return Pow(base, exponent)
+    def simplify(self):
+        return self.base.simplify() ** self.exponent.simplify()

@@ -1,12 +1,13 @@
 import pytest
 
-from derivater import MathObject, add, mul, pow, mathify
+from derivater import MathObject, Add, Mul, Pow, mathify, ln
 from derivater.__main__ import x, y
 
 
 def test_operators():
     pairs = [
         (2*x, y),
+        (2*ln(4), y),
         (x, x),
         (x, 2*x),
         (y, -2*x),
@@ -21,11 +22,11 @@ def test_operators():
             assert 0 - b == -b
             assert 1 / b == pow(b, -1)
 
-        assert a + b == add([a, b])
-        assert a - b == add([a, -b])
-        assert a * b == mul([a, b])
-        assert a / b == a * pow(b, -1)
-        assert a**b == pow(a, b)
+        assert a + b == Add([a, b]).gentle_simplify()
+        assert a - b == Add([a, -b]).gentle_simplify()
+        assert a * b == Mul([a, b]).gentle_simplify()
+        assert a / b == a * Pow(b, -1)
+        assert a**b == Pow(a, b).gentle_simplify()
 
 
 def test_replace():

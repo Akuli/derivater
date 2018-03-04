@@ -2,12 +2,16 @@ from derivater._base import MathObject, eq_and_hash, mathify
 
 
 def trig_func_class(klass):
-    def replace(self, old, new):
-        return klass(self.arg.replace(old, new))
+    def init(self, arg):
+        self.arg = mathify(arg)
 
+    def apply_to_content(self, func):
+        return klass(func(self.arg))
+
+    klass.__init__ = init
     klass.__repr__ = lambda self: '%s(%r)' % (klass.__name__, self.arg)
+    klass.apply_to_content = apply_to_content
     klass.pow_parenthesize = lambda self: '(' + repr(self) + ')'
-    klass.replace = replace
     return klass
 
 
@@ -21,9 +25,6 @@ class sin(MathObject):
     >>> sin(2*x + 1).derivative(x)
     2*cos(2*x + 1)
     """
-
-    def __init__(self, arg):
-        self.arg = arg
 
     def derivative(self, wrt):
         return cos(self.arg) * self.arg.derivative(wrt)
@@ -39,9 +40,6 @@ class cos(MathObject):
     -sin(x)
     """
 
-    def __init__(self, arg):
-        self.arg = arg
-
     def derivative(self, wrt):
         return -sin(self.arg) * self.arg.derivative(wrt)
 
@@ -51,9 +49,6 @@ class cos(MathObject):
 class tan(MathObject):
     """The tangent function, mathematically equal to ``sin(arg) / cos(arg)``.
     """
-
-    def __init__(self, arg):
-        self.arg = arg
 
     def derivative(self, wrt):
         # FIXME: this doesn't work very well

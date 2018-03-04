@@ -8,7 +8,7 @@ Derivater's Documentation
     constants
     explog
     trig
-    lowlevel
+    custom
 
 
 Indices and tables

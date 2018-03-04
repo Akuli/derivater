@@ -13,11 +13,10 @@ Symbols
 .. autoclass:: SymbolFunction
 
 
-The mathify function
---------------------
+MathObjects and Python objects
+------------------------------
 
-Derivater represents everything as instances of subclasses of
-:class:`MathObjects <MathObject>`.
+Derivater represents everything as instances of subclasses of MathObjects.
 
 >>> x = Symbol('x')
 >>> x
@@ -60,17 +59,43 @@ Traceback (most recent call last):
   ...
 AttributeError: 'int' object has no attribute 'derivative'
 
+.. note::
+    All derivater classes have all methods that MathObject has, so if there's
+    some documentation for ``MathObject.toot()``, you can do e.g. ``x.toot()``,
+    ``(2*x).toot()`` or ``ln(2).toot()``.
+
+    There's a list of MathObject methods :ref:`below <mathobject-methods>`.
+
 .. autofunction:: mathify
 
+.. warning::
+    Don't mutate math objects even if they use a mutable data structure like a
+    list. Make a new, slightly different math object instead.
 
-add, mul and pow
-----------------
 
-Usually it's easiest to do e.g. ``a + b`` instead of ``derivater.add([a, b])``,
-but these functions can be faster if you want to e.g. add together a long list
-of things. Using ``+``, ``-``, ``*``, ``/`` and ``**`` operators with
-:class:`MathObjects <MathObject>` just calls these functions.
+Simplifying
+-----------
 
-.. autofunction:: add
-.. autofunction:: mul
-.. autofunction:: pow
+MathObjects provide two ways to simplify stuff:
+
+.. automethod:: MathObject.gentle_simplify
+.. automethod:: MathObject.simplify
+
+
+.. _mathobject-methods:
+
+More MathObject Methods
+-----------------------
+
+Some of this documentation talks about *overriding*. You can ignore all that if
+you don't know what overriding is. However, if you are implementing a custom
+MathObject subclass and you are  are interested in the overriding stuff, also
+check out :ref:`this customizing guide <custom>`.
+
+.. automethod:: MathObject.derivative
+.. automethod:: MathObject.may_depend_on
+.. automethod:: MathObject.replace
+
+.. automethod:: MathObject.apply_to_content
+.. automethod:: MathObject.apply_recursively
+.. automethod:: MathObject.get_content

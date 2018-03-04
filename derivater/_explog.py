@@ -32,8 +32,7 @@ class NaturalLog(MathObject):
     """
 
     def __init__(self, numerus):
-        assert numerus != 1 and numerus != e
-        self.numerus = numerus
+        self.numerus = mathify(numerus)
 
     def __repr__(self):
         return 'ln(%r)' % self.numerus
@@ -49,10 +48,7 @@ class NaturalLog(MathObject):
         return self.numerus.may_depend_on(wrt)
 
     def derivative(self, wrt):
-        #                   1
-        # d/dx ln(f(x)) = ------ * f'(x) = f'(x) / f(x)
-        #                  f(x)
-        return self.numerus.derivative(wrt) / self.numerus
+        return 1/self.numerus * self.numerus.derivative(wrt)
 
 
 def ln(numerus):

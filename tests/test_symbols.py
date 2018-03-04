@@ -13,6 +13,17 @@ def test_reprs():
     assert repr(f(x, derivative_count=2)) == "f''(x)"
 
 
+def test_eqs_and_hashes(hasheq):
+    assert hasheq(x, x)
+    assert not hasheq(x, y)
+
+    assert hasheq(f(x), f(x))
+    assert hasheq(f_(x), f_(x))
+    assert not hasheq(f(x), f(y))
+    assert not hasheq(f(x), f_(x))
+    assert not hasheq(f(x), g(x))
+
+
 def test_may_depend_on():
     assert x.may_depend_on(x)
     assert not x.may_depend_on(y)
