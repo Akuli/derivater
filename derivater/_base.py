@@ -1,5 +1,12 @@
 import collections
+import fractions
+import functools
 import operator
+
+try:
+    from math import gcd
+except ImportError:
+    from fractions import gcd
 
 
 def eq_and_hash(converters):
@@ -87,7 +94,34 @@ def mathify(obj):
         return obj
     if isinstance(obj, int):
         return Integer(obj)
+    if isinstance(obj, fractions.Fraction):
+        return mathify(obj.numerator) / obj.denominator
     raise TypeError("don't know how to mathify " + repr(obj))
+
+
+def pythonify(obj):
+    """Convert a MathObject into a Python number.
+
+    If *obj* is already something that can be passed to :func:`mathify`, it's
+    returned as is.
+    """
+    if isinstance(obj, Integer):
+        result = obj.python_int
+    elif isinstance(obj, Add):
+        result = sum(map(pythonify, obj.objects))
+    elif isinstance(obj, Mul):
+        result = 1
+        for sub_object in obj.objects:
+            result *= pythonify(sub_object)
+    elif isinstance(obj, Pow):
+        result = (fractions.Fraction(pythonify(obj.base)) **
+                  pythonify(obj.exponent))
+    else:
+        raise TypeError("don't know how to pythonify " + repr(obj))
+
+    if isinstance(result, fractions.Fraction) and result.denominator == 1:
+        return result.numerator
+    return result
 
 
 # TODO: the MathObject docstring is not actually used anywhere :(
@@ -238,6 +272,22 @@ to.
             return obj
 
         return self.apply_recursively(replacer)
+
+    def with_fraction_coeff(self):
+        """Return a ``(fraciton_coefficient, rest)`` tuple.
+
+        >>> (2*x).with_fraction_coeff()
+        (2, x)
+        >>> (x*y).with_fraction_coeff()
+        (1, x*y)
+
+        The fraction coefficients only consists of :class:`Integers <Integer>`
+        that are multiplied or divided together.
+
+        The default implementation returns ``(mathify(1), self)``, and you can
+        override this to return something else.
+        """
+        return (mathify(1), self)
 
     def derivative(self, wrt):
         """Return the derivative with respect to *wrt*.
@@ -474,6 +524,9 @@ class Integer(MathObject):
     def __repr__(self):
         return str(self.python_int)
 
+    def with_fraction_coeff(self):
+        return (self, mathify(1))
+
     def may_depend_on(self, var):   # enough for derivative() to work
         return False
 
@@ -559,6 +612,32 @@ class Add(MathObject):
         return (Add(obj.derivative(wrt) for obj in self.objects)
                 .gentle_simplify())
 
+    def with_fraction_coeff(self):
+        # reduce() wants a non-empty sequence but Add([]).with_fraction_coeff()
+        # must not error
+        if not self.objects:
+            return super().with_fraction_coeff()
+
+        # no need to abs() anything, fractions.Fraction always moves
+        # minuses to numerator
+        coeffs = [
+            fractions.Fraction(pythonify(obj.with_fraction_coeff()[0]))
+            for obj in self.objects]
+        if not coeffs:
+            return super().with_fraction_coeff()
+
+        # yes, this handles corner cases
+        # sum([]) == 0, (0).denominator == 1
+        # fractions.Fraction always moves minuses to numerator, denominator
+        # is known to be positive
+        the_coeff_bottom = sum(coeffs).denominator
+        new_coeffs = [int(coeff*the_coeff_bottom) for coeff in coeffs]
+        the_coeff_top = functools.reduce(gcd, new_coeffs)   # gcd of many things
+
+        coeff = mathify(the_coeff_top) / the_coeff_bottom
+        return (coeff,
+                Add(obj / coeff for obj in self.objects).gentle_simplify())
+
     def gentle_simplify(self):
         """This override of :meth:`.MathObject.gentle_simplify` does these thi\
 ngs:
@@ -566,8 +645,8 @@ ngs:
         * All the added :attr:`objects` are simplified gently.
         * Nested Adds are combined into one; ``Add([a, Add([b, c])])`` becomes
           ``Add([a, b, c])``.
-        * Integers are combined into one integer, and that's always the last
-          item in :attr:`objects`.
+        * Multiplied and divided integers are combined together, and that's
+          added to the end of the result.
         * Repeatedly added objects are turned into :class:`Muls <Mul>`;
           ``Add([a, a, b])`` becomes ``Add([2*a, b])``.
         * Integer coefficients are combined: ``Add([2*a, 3*b, 4*a])`` becomes
@@ -584,36 +663,36 @@ ngs:
             else:
                 flat.append(obj)
 
-        # extract integers
-        int_value = 0
-        no_ints = []
+        # extract fractions
+        frac_value = fractions.Fraction(0)
+        no_fracs = []
         for obj in flat:
-            if isinstance(obj, Integer):
-                int_value += obj.python_int
+            if obj.with_fraction_coeff()[1] == mathify(1):
+                # purely a fraction, the whole thing is a fraction
+                # coefficient of mathify(1)
+                frac_value += pythonify(obj)
             else:
-                no_ints.append(obj)
+                no_fracs.append(obj)
 
         # turn repeated objects into _Muls
-        while max(collections.Counter(no_ints).values(), default=1) != 1:
-            no_ints = [
-                (value * coeff).gentle_simplify()
-                for value, coeff in collections.Counter(no_ints).items()]
+        while max(collections.Counter(no_fracs).values(), default=1) != 1:
+            no_fracs = [
+                (value * how_many).gentle_simplify()
+                for value, how_many in collections.Counter(no_fracs).items()]
 
-        # combine integer coefficients: 2*x + 3*x becomes 5*x
-        counts = collections.defaultdict(int)       # {the_obj: coeff}
-        for obj in no_ints:
-            if isinstance(obj, Mul) and isinstance(obj.objects[0], Integer):
-                counts[Mul(obj.objects[1:]).gentle_simplify()] += (
-                    obj.objects[0].python_int)
-            else:
-                counts[obj] += 1
+        # combine coefficients: 2*x + 3*x becomes 5*x
+        # use fractions.Fraction to avoid recursion...
+        counts = collections.defaultdict(fractions.Fraction)
+        for obj in no_fracs:
+            coeff, no_coeff = obj.with_fraction_coeff()
+            counts[no_coeff] += pythonify(coeff)
 
         # should be simple enough by now :D
-        parts = [coeff * obj for obj, coeff in counts.items()]
+        parts = [mathify(how_many) * obj for obj, how_many in counts.items()]
         while mathify(0) in parts:
             parts.remove(mathify(0))
-        if int_value:
-            parts.append(Integer(int_value))
+        if frac_value != 0:
+            parts.append(mathify(frac_value))
 
         if not parts:
             return mathify(0)
@@ -710,6 +789,23 @@ class Mul(MathObject):
                              self.objects[i+1:]))
         return Add(parts).gentle_simplify()
 
+    # gentle_simplify needs this thing, but with_fraction_coeff() calls
+    # gentle_simplify
+    def _raw_with_fraction_coeff(self):
+        coeff = fractions.Fraction(1)
+        result_objects = []
+
+        for obj in self.objects:
+            obj_coeff, obj_no_coeff = obj.with_fraction_coeff()
+            coeff *= pythonify(obj_coeff)
+            result_objects.append(obj_no_coeff)
+
+        return (coeff, result_objects)
+
+    def with_fraction_coeff(self):
+        coeff, result_objects = self._raw_with_fraction_coeff()
+        return (mathify(coeff), Mul(result_objects).gentle_simplify())
+
     def gentle_simplify(self):
         """This override of :meth:`.MathObject.gentle_simplify` does these thi\
 ngs:
@@ -717,10 +813,9 @@ ngs:
         * All the multiplied :attr:`objects` are simplified gently.
         * Nested Muls are combined into one; ``Mul([a, Mul([b, c])])`` becomes
           ``Mul([a, b, c])``.
-        * Integers are combined into one integer, and that's always the first
-          item in :attr:`objects`. (Note that :class:`Add.gentle_simplify` does
-          the same thing, but it puts the integer last; this means that
-          ``3 + x*2`` turns into ``2*x + 3``.)
+        * The coefficient from :meth:`with_fraction_coeff` is moved to
+          beginning. If the coefficient is a Mul, two objects are inserted to
+          the beginning.
         * Repeatedly added objects are turned into :class:`Pows <Pow>`;
           ``Mul([a, a, b])`` becomes ``Mul([a**2, b])``.
         * Powers with same base are combined: ``Mul([x**a, y, x**b])`` becomes
@@ -739,31 +834,24 @@ ngs:
             else:
                 flat.append(obj)
 
-        # extract integers
-        int_value = 1
-        no_ints = []
-        for obj in flat:
-            if isinstance(obj, Integer):
-                int_value *= obj.python_int
-            # FIXME: this relies on order!
-            # in general, better support for fractions is needed >:/((
-            elif (isinstance(obj, Pow) and
-                  obj.exponent == mathify(-1) and
-                  isinstance(obj.base, Integer) and
-                  int_value % obj.base.python_int == 0):
-                int_value //= obj.base.python_int
-            else:
-                no_ints.append(obj)
+        # extract the coefficient
+        coeff, no_coeff = Mul(flat)._raw_with_fraction_coeff()
+        if coeff == 0:
+            return mathify(0)
+
+        # not quite sure why, but it recurses if this is moved later :D
+        while mathify(1) in no_coeff:
+            no_coeff.remove(mathify(1))
 
         # turn repeated objects into Pows
-        while max(collections.Counter(no_ints).values(), default=1) != 1:
-            no_ints = [
+        while max(collections.Counter(no_coeff).values(), default=1) != 1:
+            no_coeff = [
                 base ** exponent
-                for base, exponent in collections.Counter(no_ints).items()]
+                for base, exponent in collections.Counter(no_coeff).items()]
 
         # combine powers with same bases
         powers = {}     # {base: exponent}
-        for obj in no_ints:
+        for obj in no_coeff:
             if isinstance(obj, Pow):
                 base = obj.base
                 exponent = obj.exponent
@@ -776,8 +864,13 @@ ngs:
         parts = [base ** exponent for base, exponent in powers.items()]
         while mathify(1) in parts:
             parts.remove(mathify(1))
-        if int_value != 1:
-            parts.insert(0, mathify(int_value))
+
+        # look carefully, the numerator ends up there first and
+        # fractions.Fraction always brings minus signs to the numerator
+        if coeff.denominator != 1:
+            parts.insert(0, Pow(coeff.denominator, -1))
+        if coeff.numerator != 1:
+            parts.insert(0, mathify(coeff.numerator))
 
         if not parts:
             return mathify(1)
@@ -848,6 +941,12 @@ class Pow(MathObject):
         rewrite = exp(self.exponent * ln(self.base))
         result = rewrite.derivative(wrt)
         return result.replace(rewrite, self)    # a bit simpler
+
+    def with_fraction_coeff(self):
+        if (self.base.with_fraction_coeff()[0] == self.base and
+                self.exponent.with_fraction_coeff()[0] == self.exponent):
+            return (self, mathify(1))
+        return (mathify(1), self)
 
     def gentle_simplify(self):
         """This override of :meth:`.MathObject.gentle_simplify` does these thi\

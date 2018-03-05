@@ -4,7 +4,7 @@ import pytest
 
 from derivater import (eq_and_hash, MathObject, Symbol, SymbolFunction,
                        Add, Mul, Pow, mathify, ln)
-from derivater.__main__ import x, y, z, a, b, f, g, f_, g_
+from derivater.__main__ import x, y, z, a, b, f, g, f_, g_, half
 
 h = functools.partial(SymbolFunction, 'h')
 h_ = functools.partial(h, derivative_count=1)
@@ -110,6 +110,10 @@ def test_automagic_gentle_simplify():
     assert not Pow(x, Thing()).exponent.gentle
 
 
+def test_add_with_fraction_coeff():
+    pass        # tests pass, great!
+
+
 def test_add_gentle_simplify():
     assert Add([x, y, Thing()]).gentle_simplify() == Add([x, y, Thing(True)])
     assert (Add([x, y, Add([z, Thing()])]).gentle_simplify() ==
@@ -122,6 +126,9 @@ def test_add_gentle_simplify():
     assert Add([y]).gentle_simplify() == y
     assert Add([2*x, -2*x]).gentle_simplify() == mathify(0)
     assert Add([]).gentle_simplify() == mathify(0)
+
+    assert Add([2, x, half]).gentle_simplify().objects == [x, half*5]
+    assert Add([3*x, half*x]).gentle_simplify() == half*7*x
 
     # these were broken in old derivater versions
     assert Add([x, y, -x]).gentle_simplify() == y

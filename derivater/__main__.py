@@ -14,3 +14,8 @@ g_ = _partial(g, derivative_count=1)
 x = Symbol('x')
 y = Symbol('y')
 z = Symbol('z')
+
+# 1/2 returns a float :( type half instead, e.g. (half*x**2).derivative(x)
+# it's enough to mathify one of the objects, the other will be converted
+# automatically
+half = mathify(1) / 2
