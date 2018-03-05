@@ -707,8 +707,8 @@ ngs:
 
     # TODO
     def simplify(self):
-        result = (Add(part.simplify() for part in self.objects)
-                  .gentle_simplify())
+        return (Add(part.simplify() for part in self.objects)
+                .gentle_simplify())
 
 
 @eq_and_hash({'objects': frozenset})
