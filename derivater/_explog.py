@@ -1,4 +1,5 @@
 import functools
+import math
 
 from derivater._base import MathObject, eq_and_hash, mathify
 from derivater._constants import e
@@ -36,6 +37,9 @@ class NaturalLog(MathObject):
 
     def __repr__(self):
         return 'ln(%r)' % self.numerus
+
+    def __float__(self):
+        return math.log(float(self.numerus))
 
     def apply_to_content(self, func):
         return ln(func(self.numerus))

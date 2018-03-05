@@ -1,4 +1,5 @@
 import functools
+import math
 
 from derivater._base import MathObject, eq_and_hash, mathify, sqrt
 
@@ -23,6 +24,9 @@ def trig_func_class(repr_name):
 @trig_func_class('sin')
 class Sine(MathObject):
 
+    def __float__(self):
+        return math.sin(float(self.arg))
+
     def derivative(self, wrt):
         return cos(self.arg) * self.arg.derivative(wrt)
 
@@ -36,6 +40,9 @@ class Sine(MathObject):
 @trig_func_class('cos')
 class Cosine(MathObject):
 
+    def __float__(self):
+        return math.cos(float(self.arg))
+
     def derivative(self, wrt):
         return -sin(self.arg) * self.arg.derivative(wrt)
 
@@ -48,6 +55,9 @@ class Cosine(MathObject):
 
 @trig_func_class('tan')
 class Tangent(MathObject):
+
+    def __float__(self):
+        return math.tan(float(self.arg))
 
     def derivative(self, wrt):
         # (sin(x) / cos(x)).derivative(x) returns (sin(x))**2/(cos(x))**2 + 1
@@ -63,6 +73,9 @@ class Tangent(MathObject):
 @trig_func_class('asin')
 class ArcSine(MathObject):
 
+    def __float__(self):
+        return math.asin(float(self.arg))
+
     def derivative(self, wrt):
         return 1/sqrt(1 - self.arg**2) * self.arg.derivative(wrt)
 
@@ -70,12 +83,18 @@ class ArcSine(MathObject):
 @trig_func_class('acos')
 class ArcCosine(MathObject):
 
+    def __float__(self):
+        return math.acos(float(self.arg))
+
     def derivative(self, wrt):
         return -1/sqrt(1 - self.arg**2) * self.arg.derivative(wrt)
 
 
 @trig_func_class('atan')
 class ArcTangent(MathObject):
+
+    def __float__(self):
+        return math.atan(float(self.arg))
 
     def derivative(self, wrt):
         return 1/(1 + self.arg**2) * self.arg.derivative(wrt)

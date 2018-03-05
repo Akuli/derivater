@@ -1,6 +1,7 @@
 import collections
 import fractions
 import functools
+import math
 import operator
 
 try:
@@ -533,6 +534,9 @@ class Integer(MathObject):
     def __repr__(self):
         return str(self.python_int)
 
+    def __float__(self):
+        return float(self.python_int)
+
     def with_fraction_coeff(self):
         return (self, mathify(1))
 
@@ -582,6 +586,9 @@ class Add(MathObject):
                 result.append(' + ')
                 result.append(obj.add_parenthesize())
         return ''.join(result)
+
+    def __float__(self):
+        return sum(map(float, self.objects))
 
     # TODO: how about something like (a+b+c+x).replace(b+c, y)?
     def apply_to_content(self, func):
@@ -754,6 +761,11 @@ class Mul(MathObject):
             bottom_string = Mul(bottom).pow_parenthesize()
         return top_string + ' / ' + bottom_string
 
+    def __float__(self):
+        if not self.content:
+            return 1.0
+        return functools.reduce(operator.mul, map(float, self.content))
+
     def apply_to_content(self, func):
         return Mul(map(func, self.objects))
 
@@ -912,6 +924,14 @@ class Pow(MathObject):
             return '1 / ' + bottom_string
         return (self.base.pow_parenthesize() + '**' +
                 self.exponent.pow_parenthesize())
+
+    def __float__(self):
+        # derivater._constants needs this file
+        from derivater._constants import e
+        if self.base == e:
+            # more precision
+            return math.exp(float(self.exponent))
+        return float(self.base) ** float(self.exponent)
 
     def pow_parenthesize(self):
         # x**y**z = x**(y**z)

@@ -20,6 +20,7 @@ just returns ``ln(x) / ln(2)``. Let's implement an actual base 2 logarithm
 object to see how things go.
 ::
 
+    import math
     from derivater import MathObject, Symbol, mathify
 
 
@@ -30,6 +31,10 @@ object to see how things go.
 
         def __repr__(self):
             return 'log2(%s)' % repr(self.numerus)
+
+        # this fails if self.numerus is not floatable, that's good
+        def __float__(self):
+            return math.log2(float(self.numerus))
 
         def gentle_simplify(self):
             # some special values, kind of dumb but not too bad
@@ -49,7 +54,7 @@ object to see how things go.
         return Base2Log(numerus).gentle_simplify()
 
 
-    # minimal tests :D
+    # minimal tests
     print(log2(1))      # 0
     print(Base2Log(1))  # log2(1)
     print(log2(2))      # 1
