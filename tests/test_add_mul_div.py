@@ -110,8 +110,15 @@ def test_automagic_gentle_simplify():
     assert not Pow(x, Thing()).exponent.gentle
 
 
-def test_add_with_fraction_coeff():
-    pass        # tests pass, great!
+def test_with_fraction_coeff():
+    assert Pow(3, 4).with_fraction_coeff() == (Pow(3, 4), mathify(1))
+    assert Pow(3, -4).with_fraction_coeff() == (Pow(3, -4), mathify(1))
+    assert Mul([2, Pow(3, -4)]).with_fraction_coeff() == (
+        mathify(2)/81, mathify(1))
+    assert Mul([half, x, 3]).with_fraction_coeff() == (half*3, x)
+    assert Add([2*x/3, 4*y/5]).with_fraction_coeff() == (
+        mathify(2)/15, 5*x+6*y)
+    assert Add([]).with_fraction_coeff() == (mathify(1), Add([]))
 
 
 def test_add_gentle_simplify():
@@ -231,3 +238,5 @@ def test_derivatives():
         f_(x)*g(x)*h(x) + f(x)*g_(x)*h(x) + f(x)*g(x)*h_(x))
     assert (f(x)**g(x)).derivative(x) == (
         f(x)**g(x) * (g_(x)*ln(f(x)) + g(x)*f_(x)/f(x)))
+    assert (f(x)**a).derivative(x) == a*f(x)**(a-1)*f_(x)
+    assert (a**f(x)).derivative(x) == a**f(x)*ln(a)*f_(x)

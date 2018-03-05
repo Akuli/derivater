@@ -5,7 +5,7 @@ import operator
 
 try:
     from math import gcd
-except ImportError:
+except ImportError:     # pragma: no cover
     from fractions import gcd
 
 
@@ -100,12 +100,16 @@ def mathify(obj):
 
 
 def pythonify(obj):
-    """Convert a MathObject into a Python number.
+    """Convert a MathObject into a Python :class:`int` or :class:`fractions.Fr\
+action`, but not a float.
 
     If *obj* is already something that can be passed to :func:`mathify`, it's
-    returned as is.
+    usually returned as is; as an exception, a :class:`fractions.Fraction` that
+    represents an integer is returned as an integer directly.
     """
-    if isinstance(obj, Integer):
+    if isinstance(obj, (int, fractions.Fraction)):
+        result = obj
+    elif isinstance(obj, Integer):
         result = obj.python_int
     elif isinstance(obj, Add):
         result = sum(map(pythonify, obj.objects))
@@ -280,6 +284,8 @@ to.
         (2, x)
         >>> (x*y).with_fraction_coeff()
         (1, x*y)
+        >>> (2*x/3 + 4*y/5).with_fraction_coeff()
+        (2 / 15, 5*x + 6*y)
 
         The fraction coefficients only consists of :class:`Integers <Integer>`
         that are multiplied or divided together.
@@ -518,6 +524,9 @@ class Integer(MathObject):
 
     def __init__(self, python_int):
         if not isinstance(python_int, int):
+            if isinstance(python_int, Integer):
+                # "cannot create Integer of 2" would be confusing
+                raise TypeError("cannot create a new Integer of an Integer")
             raise TypeError("cannot create Integer of " + repr(python_int))
         self.python_int = python_int
 
@@ -613,18 +622,14 @@ class Add(MathObject):
                 .gentle_simplify())
 
     def with_fraction_coeff(self):
-        # reduce() wants a non-empty sequence but Add([]).with_fraction_coeff()
-        # must not error
+        # reduce() below wants a non-empty sequence but
+        # Add([]).with_fraction_coeff() must not error
         if not self.objects:
             return super().with_fraction_coeff()
 
-        # no need to abs() anything, fractions.Fraction always moves
-        # minuses to numerator
         coeffs = [
             fractions.Fraction(pythonify(obj.with_fraction_coeff()[0]))
             for obj in self.objects]
-        if not coeffs:
-            return super().with_fraction_coeff()
 
         # yes, this handles corner cases
         # sum([]) == 0, (0).denominator == 1
@@ -702,7 +707,8 @@ ngs:
 
     # TODO
     def simplify(self):
-        return Add(part.simplify() for part in self.objects).gentle_simplify()
+        result = (Add(part.simplify() for part in self.objects)
+                  .gentle_simplify())
 
 
 @eq_and_hash({'objects': frozenset})
